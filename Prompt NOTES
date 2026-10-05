@@ -1,0 +1,418 @@
+PROJECT UPDATE - REDEFINE SYSTEM ARCHITECTURE BEFORE CONTINUING DEVELOPMENT
+
+IMPORTANT CONTEXT:
+
+The current design direction is incorrect.
+
+This is NOT a vendor-submitted promo claim portal.
+
+Vendors do NOT proactively submit promotional credits owed to us.
+
+Our actual workflow is:
+
+TREES POS Sales Data
+→ Promo Credit Discovery
+→ Internal Credit Validation
+→ Vendor Outreach
+→ Vendor Response
+→ Credit Memo / Deduction / Payment
+→ Accounting Application
+→ Reporting & Recovery Analytics
+
+We identify credits owed to us and pursue vendors for reimbursement.
+
+The existing Promo Credit Tracker already performs many core functions:
+
+EXISTING SYSTEM CAPABILITIES
+
+1. TREES Sales Import Engine
+- Imports itemized POS sales CSVs
+- Tracks discounts and vendor credit owed
+- Aggregates raw sales into vendor credit opportunities
+
+Collections:
+- treesSales
+- promoCredits
+- brands
+- systemLogs
+- emailHistories
+
+2. Vendor Directory
+Contains:
+- Vendor Name
+- Distributor
+- Rep
+- Email
+- Payee
+- Order From
+- Asset Library
+- Notes
+
+3. Credit Recovery Workflow
+
+Current statuses:
+- Pending
+- Report Sent
+- Applied
+- Uncollectable
+
+4. Reporting System
+- Monthly brand reports
+- Vendor outreach email generation
+- CSV exports
+- Credit tracking dashboard
+
+5. Accounting Ledger
+The promoCredits collection is effectively the financial settlement ledger.
+
+======================================================
+
+NEW PRODUCT POSITIONING
+
+Rename concept from:
+
+"Vendor Promo Credit Reporting & Intake Portal"
+
+TO:
+
+"Promo Credit Recovery Platform (PCRP)"
+
+OR
+
+"Vendor Credit Recovery Management Platform"
+
+This is a credit discovery and recovery system, not a claim intake tool.
+
+======================================================
+
+TARGET ARCHITECTURE
+
+SYSTEM 1:
+Promo Credit Tracker
+Purpose:
+- TREES ingestion
+- Credit discovery
+- Sales aggregation
+- Accounting ledger
+- Reporting
+
+SYSTEM 2:
+Promo Credit Recovery Platform
+Purpose:
+- Vendor outreach
+- Credit recovery workflow
+- Communication management
+- Automation
+- Vendor response tracking
+- Recovery analytics
+
+SYSTEM 3:
+Credit Resolution Tracker
+Purpose:
+- Disputes
+- Rejections
+- Exceptions
+- Escalations
+
+======================================================
+
+REMOVE THESE FEATURES COMPLETELY
+
+Do NOT build:
+
+- Vendor claim intake forms
+- Vendor self-service claim creation
+- Vendor promo submission portal
+- Broker claim submission workflows
+- Vendor-created credit requests
+- Vendor upload-first workflows
+
+These are based on an incorrect assumption.
+
+======================================================
+
+REVISED MVP MODULES
+
+MODULE 1
+Vendor Master Directory
+
+Enhance existing brands collection.
+
+Additional fields:
+
+vendorCode
+vendorStatus
+category
+broker
+accountsReceivableContact
+submissionMethod
+creditAnalyst
+paymentType
+
+======================================================
+
+MODULE 2
+Credit Discovery Engine
+
+Uses:
+
+treesSales
+promoCredits
+
+Identifies:
+
+- Scan Downs
+- TPRs
+- BOGOs
+- Display Credits
+- New Item Credits
+- Marketing Funds
+
+Creates:
+
+Potential Credit Opportunities
+
+======================================================
+
+MODULE 3
+Vendor Outreach Center
+
+Statuses:
+
+Discovered
+Validated
+Ready To Send
+Contacted
+Follow Up Required
+Awaiting Vendor Response
+Vendor Acknowledged
+Awaiting Credit Memo
+Resolved
+
+Features:
+
+- Email generation
+- CSV generation
+- DIME portal helper
+- Vendor-specific outreach templates
+
+======================================================
+
+MODULE 4
+Recovery Workflow Engine
+
+Replace current status model.
+
+New statuses:
+
+Discovered
+Validated
+Contacted
+Acknowledged
+Under Review
+Credit Approved
+Memo Received
+Applied
+Rejected
+Written Off
+
+======================================================
+
+MODULE 5
+Communication Tracking
+
+Replace simple email history logging.
+
+Track:
+
+Email
+Portal Submission
+Phone Call
+Meeting
+Vendor Response
+
+Timeline view:
+
+10/01 Report Sent
+10/08 Reminder Sent
+10/12 Vendor Replied
+10/15 Approved
+10/20 Memo Received
+
+======================================================
+
+MODULE 6
+Recovery Automation Engine
+
+Automated follow-up process:
+
+Day 0
+Initial Contact
+
+Day 7
+Reminder
+
+Day 14
+Escalation
+
+Day 21
+Collection Alert
+
+Day 30+
+Aging Risk Notification
+
+======================================================
+
+MODULE 7
+Credit Intelligence Engine
+
+Compare:
+
+Expected Credit
+(Via TREES Data)
+
+VS
+
+Vendor Credit Received
+
+Calculate:
+
+Variance
+Recovery %
+Risk Score
+
+Example:
+
+Expected:
+$5,425
+
+Received:
+$5,300
+
+Variance:
+-$125
+
+Risk:
+Low
+
+======================================================
+
+MODULE 8
+Accounting Settlement Workbench
+
+Track:
+
+Credit Memo
+Deduction
+ACH
+Wire
+Check
+
+Fields:
+
+creditMemoNumber
+deductionNumber
+erpReference
+settlementDate
+settlementMethod
+
+======================================================
+
+MODULE 9
+Immutable Audit Ledger
+
+Replace editable logs.
+
+Create append-only event system.
+
+Examples:
+
+Status Changed
+Amount Modified
+Reminder Sent
+Vendor Response Received
+
+======================================================
+
+MODULE 10
+Recovery Dashboard
+
+KPIs:
+
+Credits Identified
+Credits Recovered
+Outstanding Credits
+Average Recovery Time
+Recovery %
+Vendor Aging
+
+Buckets:
+
+0-30
+31-60
+61-90
+90+
+
+======================================================
+
+MODULE 11
+Vendor Portal Connectors
+
+Not vendor logins.
+
+Instead:
+
+DIME
+Email
+Jotform
+EDI
+Vendor Portal Links
+
+Vendor records should define preferred submission path.
+
+======================================================
+
+MODULE 12
+Executive Dashboard
+
+Metrics:
+
+Credits Identified
+Credits Recovered
+Recovery Rate
+Outstanding Exposure
+Average Days To Recover
+Top Vendors By Outstanding Balance
+Top Vendors By Recovery Value
+
+======================================================
+
+NEW REQUIREMENT
+
+The existing Promo Credit Tracker remains the system of record for:
+
+- TREES sales
+- Vendor master data
+- Credit ledger
+- Financial reporting
+
+The new platform must integrate with those datasets and extend recovery management rather than replace them.
+
+======================================================
+
+REQUEST
+
+Using this updated business model, redesign:
+
+1. Database schema
+2. Firestore collections
+3. User roles
+4. Navigation structure
+5. Workflow engine
+6. Dashboard architecture
+7. Automation rules
+8. Communication timeline
+9. Accounting module
+10. Future roadmap
+
+Optimize specifically for identifying, pursuing, collecting, tracking, and reporting vendor promotional credits owed to RRED.
