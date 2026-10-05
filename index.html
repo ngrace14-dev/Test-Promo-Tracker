@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Promo Credit Tracker</title>
+    
+    <!-- Dependencies -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Calibri:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- External CSS -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app" class="h-full flex flex-col bg-gray-100" v-cloak>
+        
+        <!-- HEADER (Obsidian & Gold) -->
+        <header v-if="isManagerUnlocked" class="bg-gray-950 text-white px-4 md:px-5 py-3 flex flex-col md:flex-row justify-between items-center shrink-0 shadow-lg z-20 gap-3 md:gap-0 border-b border-gray-800">
+            <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
+                <div class="flex items-center gap-3">
+                    <i data-lucide="badge-dollar-sign" class="w-7 h-7 text-amber-500"></i>
+                    <div>
+                        <h1 class="font-bold tracking-wide text-lg leading-tight text-white">Promo Credit Tracker</h1>
+                        <div class="text-[10px] uppercase font-bold tracking-widest flex items-center gap-2 text-emerald-400">
+                            <span><i data-lucide="cloud" class="w-3 h-3 inline mb-0.5"></i> Cloud Sync Active</span>
+                        </div>
+                    </div>
+                </div>
+                <button v-if="isManagerUnlocked" @click="forceLock" class="md:hidden bg-gray-800 hover:bg-gray-700 text-amber-500 p-2 rounded shadow transition-colors"><i data-lucide="lock" class="w-4 h-4"></i></button>
+            </div>
+
+            <div class="flex items-center bg-gray-900 p-1 rounded-lg shadow-inner w-full sm:w-auto overflow-hidden border border-gray-800" v-if="isManagerUnlocked">
+                <button @click="activeSite = 'Red Bluff'" :class="activeSite === 'Red Bluff' ? 'bg-amber-500 text-gray-950 shadow-md font-extrabold' : 'text-gray-400 hover:text-white'" class="px-5 py-1.5 rounded text-sm transition-all flex-1 sm:flex-none">Red Bluff</button>
+                <button @click="activeSite = 'Redding'" :class="activeSite === 'Redding' ? 'bg-amber-500 text-gray-950 shadow-md font-extrabold' : 'text-gray-400 hover:text-white'" class="px-5 py-1.5 rounded text-sm transition-all flex-1 sm:flex-none">Redding</button>
+            </div>
+
+            <div class="hidden md:flex items-center gap-2" v-if="isManagerUnlocked">
+                <div class="flex items-center gap-2 mr-2 bg-gray-900 px-3 py-1.5 rounded shadow-inner border border-gray-800 text-gray-300">
+                    <i data-lucide="user" class="w-4 h-4 text-emerald-500"></i> <span class="text-sm font-bold">{{ loggedInUser }}</span>
+                </div>
+                <button v-if="isSuperAdmin" @click="activeTab = 'Logs'" class="bg-gray-800 hover:bg-gray-700 text-amber-500 hover:text-amber-400 px-3 py-1.5 rounded flex items-center gap-1.5 text-sm font-bold shadow transition-colors"><i data-lucide="activity" class="w-4 h-4"></i> Logs</button>
+                <button @click="forceLock" class="bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-amber-500 px-3 py-1.5 rounded flex items-center gap-1.5 text-sm font-bold shadow transition-colors"><i data-lucide="lock" class="w-4 h-4"></i> Lock</button>
+                <button @click="openImportModal" class="bg-gray-800 border border-gray-700 hover:bg-gray-700 text-amber-500 px-3 py-1.5 rounded flex items-center gap-1.5 text-sm font-bold shadow transition-colors"><i data-lucide="grid" class="w-4 h-4"></i> Paste Excel</button>
+                <button @click="openPromoModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded flex items-center gap-1.5 text-sm font-bold shadow transition-colors"><i data-lucide="plus" class="w-4 h-4"></i> New Promo</button>
+            </div>
+            
+            <div class="md:hidden flex w-full gap-2" v-if="isManagerUnlocked">
+                <button @click="openImportModal" class="flex-1 bg-gray-800 border border-gray-700 text-amber-500 px-3 py-2 rounded flex justify-center items-center gap-1.5 text-sm font-bold shadow"><i data-lucide="grid" class="w-4 h-4"></i> Excel</button>
+                <button @click="openPromoModal()" class="flex-1 bg-emerald-600 text-white px-3 py-2 rounded flex justify-center items-center gap-1.5 text-sm font-bold shadow"><i data-lucide="plus" class="w-4 h-4"></i> Promo</button>
+            </div>
+        </header>
+
+        <!-- SECURE FIREBASE LOGIN SCREEN -->
+        <main v-if="!isManagerUnlocked" class="flex-1 flex flex-col items-center justify-center bg-gray-100 p-4">
+             <div class="bg-white rounded-2xl shadow-2xl p-8 md:p-10 max-w-md w-full text-center border border-gray-200">
+
+                 <div class="bg-gray-950 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+                    <i data-lucide="shield-check" class="w-10 h-10 text-emerald-500"></i>
+                 </div>
+                 <h2 class="text-2xl font-extrabold text-gray-900 mb-2">Secure Login</h2>
+                 <p class="text-gray-500 mb-6 font-medium">Enter your authorized email and password.</p>
+                 
+                 <div class="flex flex-col gap-4 mb-6">
+                     <input type="email" v-model="emailInput" class="border-2 border-gray-300 p-3 w-full rounded-xl focus:border-emerald-600 focus:ring-4 focus:ring-emerald-600/10 outline-none text-center font-bold text-gray-900 transition-all" placeholder="Email Address">
+                     <input type="password" v-model="passwordInput" @keyup.enter="handleLogin" class="border-2 border-gray-300 p-3 w-full rounded-xl focus:border-emerald-600 focus:ring-4 focus:ring-emerald-600/10 outline-none text-center font-bold text-gray-900 transition-all" placeholder="Password">
+                 </div>
+                 
+                 <p v-if="authError" class="text-red-500 text-sm font-bold mb-4">{{ authError }}</p>
+                 <button @click="handleLogin" class="w-full py-3.5 bg-gray-950 hover:bg-gray-800 text-amber-500 rounded-xl font-bold text-lg shadow-md transition-colors flex items-center justify-center gap-2">Access Tracker</button>
+             </div>
+        </main>
+
+        <!-- APP TABS NAV (Obsidian Background) -->
+        <div v-if="isManagerUnlocked" class="bg-gray-950 px-4 md:px-6 pt-2 flex gap-2 shrink-0 z-10 shadow-sm overflow-x-auto no-scrollbar border-b border-gray-800">
+            <button @click="activeTab = 'Dashboard'" :class="activeTab === 'Dashboard' ? 'bg-gray-100 text-gray-900 font-extrabold border-t-4 border-emerald-500' : 'bg-gray-900/50 text-gray-400 hover:bg-gray-800 hover:text-white'" class="px-6 py-2 rounded-t-xl text-sm transition-colors tracking-wide whitespace-nowrap">Dashboard</button>
+            <button @click="activeTab = 'Tracker'" :class="activeTab === 'Tracker' ? 'bg-gray-100 text-gray-900 font-extrabold border-t-4 border-emerald-500' : 'bg-gray-900/50 text-gray-400 hover:bg-gray-800 hover:text-white'" class="px-6 py-2 rounded-t-xl text-sm transition-colors tracking-wide whitespace-nowrap">Main Tracker</button>
+            <button @click="activeTab = 'Reports'" :class="activeTab === 'Reports' ? 'bg-gray-100 text-gray-900 font-extrabold border-t-4 border-emerald-500' : 'bg-gray-900/50 text-gray-400 hover:bg-gray-800 hover:text-white'" class="px-6 py-2 rounded-t-xl text-sm transition-colors tracking-wide whitespace-nowrap">Monthly Reports</button>
+            <button @click="activeTab = 'Sales'" :class="activeTab === 'Sales' ? 'bg-gray-100 text-gray-900 font-extrabold border-t-4 border-emerald-500' : 'bg-gray-900/50 text-gray-400 hover:bg-gray-800 hover:text-white'" class="px-6 py-2 rounded-t-xl text-sm transition-colors tracking-wide flex items-center gap-2 whitespace-nowrap">Trees Sales CSV <span v-if="filteredTreesSalesData.length > 0 && activeTab !== 'Sales'" class="bg-amber-500 text-gray-950 text-[10px] px-1.5 py-0.5 rounded-full">{{ filteredTreesSalesData.length }}</span></button>
+            <button @click="activeTab = 'Brands'" :class="activeTab === 'Brands' ? 'bg-gray-100 text-gray-900 font-extrabold border-t-4 border-emerald-500' : 'bg-gray-900/50 text-gray-400 hover:bg-gray-800 hover:text-white'" class="px-6 py-2 rounded-t-xl text-sm transition-colors tracking-wide whitespace-nowrap">Brand Directory</button>
+            <button v-if="isSuperAdmin" @click="activeTab = 'Logs'" :class="activeTab === 'Logs' ? 'bg-gray-100 text-gray-900 font-extrabold border-t-4 border-amber-500' : 'bg-gray-900/50 text-gray-400 hover:bg-gray-800 hover:text-white'" class="px-6 py-2 rounded-t-xl text-sm transition-colors tracking-wide whitespace-nowrap"><i data-lucide="activity" class="w-3.5 h-3.5 inline mr-1 mb-0.5"></i>System Logs</button>
+        </div>
+
+        <!-- SHARED GLOBAL FILTERS -->
+        <div v-if="isManagerUnlocked && activeTab !== 'Logs'" class="bg-gray-100 px-4 md:px-6 pt-4 pb-2 flex flex-col lg:flex-row justify-between items-center shrink-0 gap-3 z-10 border-b border-gray-200">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-300 p-1.5 flex overflow-x-auto gap-1 w-full lg:flex-1 no-scrollbar">
+                <button @click="activeMonth = 'All'" :class="activeMonth === 'All' ? 'bg-gray-900 text-emerald-500 font-bold shadow' : 'text-gray-600 hover:bg-gray-100 font-medium'" class="px-4 py-1.5 rounded-lg text-sm transition-all whitespace-nowrap">All Year</button>
+                <div class="w-px bg-gray-300 mx-1 shrink-0"></div>
+                <button v-for="month in calendarMonths" :key="month" @click="activeMonth = month" 
+                        :class="activeMonth === month ? 'bg-gray-900 text-emerald-500 font-bold shadow' : 'text-gray-600 hover:bg-gray-100 font-medium'" 
+                        class="px-4 py-1.5 rounded-lg text-sm transition-all whitespace-nowrap lg:flex-1 text-center">
+                    {{ month }}
+                </button>
+            </div>
+            <div class="relative w-full lg:w-80 shrink-0">
+                <i data-lucide="search" class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <input type="text" v-model="searchQueryInput" placeholder="Search brands, types, records..." class="w-full bg-white border border-gray-300 rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-sm transition-shadow">
+                <button v-if="searchQueryInput" @click="searchQueryInput = ''" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    <i data-lucide="x-circle" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- MONTHLY REPORTS TAB (BROKEN OUT BY BRAND) -->
+        <main v-if="isManagerUnlocked && activeTab === 'Reports'" class="flex-1 flex flex-col p-4 md:p-6 bg-gray-100 overflow-y-auto">
+            <div class="mb-6">
+                <h2 class="text-xl font-bold text-gray-900">Monthly Brand Reports</h2>
+                <p class="text-sm text-gray-500">Reports broken out by brand for each month. Generate emails or download CSVs directly for each brand.</p>
+            </div>
+
+            <div v-if="monthlyReportSummaries.length === 0" class="text-center py-16 bg-white rounded-xl border border-gray-200 shadow-sm text-gray-500 font-bold">
+                No report entries found for {{ activeSite }} <span v-if="activeMonth !== 'All'">in {{ activeMonth }}</span>.
+            </div>
+
+            <div v-else class="space-y-6">
+                <div v-for="monthGroup in monthlyReportSummaries" :key="monthGroup.month" class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                    <!-- Month Header Bar (Obsidian & Emerald) -->
+                    <div class="bg-gradient-to-r from-gray-950 to-gray-800 text-white px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                        <div>
+                            <h3 class="text-xl font-bold tracking-wide flex items-center gap-2 text-emerald-500">
+                                <i data-lucide="calendar" class="w-5 h-5 text-emerald-500"></i>
+                                {{ monthGroup.month }}
+                            </h3>
+                            <p class="text-xs text-gray-300 mt-0.5">{{ monthGroup.brandList.length }} Brands • {{ monthGroup.count }} Total Entries</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-lg font-extrabold text-emerald-400 bg-white/10 px-3 py-1 rounded-lg border border-white/10">{{ formatCurrency(monthGroup.total) }}</span>
+                            <button @click="regenerateMonthReports(monthGroup)" class="bg-gray-800 text-amber-500 hover:bg-gray-700 px-3 py-1.5 rounded-lg font-bold text-xs shadow transition-colors flex items-center gap-1.5 border border-gray-700">
+                                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Regenerate Month
+                            </button>
+                            <button @click="downloadMonthlyReport(monthGroup)" class="bg-emerald-600 text-white hover:bg-emerald-500 px-3 py-1.5 rounded-lg font-bold text-xs shadow transition-colors flex items-center gap-1.5">
+                                <i data-lucide="download" class="w-3.5 h-3.5"></i> Full Month CSV
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Brand Breakdown Grid -->
+                    <div class="p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div v-for="brand in monthGroup.brandList" :key="brand.vendor" class="bg-gray-50 border border-gray-200 rounded-xl p-4 flex flex-col justify-between hover:border-emerald-300 transition-all shadow-sm">
+                            <div class="flex justify-between items-start mb-3 border-b border-gray-200 pb-3">
+                                <div>
+                                    <h4 class="font-bold text-gray-900 text-base flex items-center gap-2">
+                                        <i data-lucide="building" class="w-4 h-4 text-emerald-600"></i>
+                                        {{ brand.vendor }}
+                                        <button @click="regenerateBrandSummary(brand)" title="Regenerate from Raw Sales" class="text-gray-400 hover:text-amber-600 transition-colors">
+                                            <i data-lucide="refresh-cw" class="w-3 h-3"></i>
+                                        </button>
+                                    </h4>
+                                    <p class="text-xs text-gray-500 font-mono mt-0.5" :class="{'text-amber-600 font-bold': !brand.email}">
+                                        {{ brand.email || '⚠️ No email mapped in Brand Directory' }}
+                                    </p>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-lg font-extrabold text-gray-900">{{ formatCurrency(brand.total) }}</div>
+                                    <div class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{{ brand.credits.length }} Credits</div>
+                                </div>
+                            </div>
+
+                            <!-- Preview List of Credits for this brand -->
+                            <div class="mb-4 text-xs text-gray-600 space-y-1 max-h-32 overflow-y-auto pr-1">
+                                <div v-for="c in brand.credits" :key="c.id" class="flex justify-between bg-white px-2 py-1.5 rounded border border-gray-100">
+                                    <span class="truncate pr-2 font-medium">{{ c.creditType || 'Promo' }} <span class="text-gray-400">({{ c.dates }})</span></span>
+                                    <span class="font-bold text-gray-900 whitespace-nowrap">{{ formatCurrency(c.amount) }}</span>
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons Attached to Each Brand -->
+                            <button v-if="brand.credits.some(c => c.status === 'Pending')" 
+                                @click="draftEmail(brand)" :disabled="!brand.email" 
+                                :class="!brand.email ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'" 
+                                class="flex-1 py-2 rounded-lg font-bold flex items-center justify-center gap-1.5 text-xs transition-colors">
+                                <i data-lucide="mail" class="w-3.5 h-3.5"></i> Draft Email
+                            </button>
+                            
+                            <button v-if="brand.credits.some(c => c.status === 'Pending')"
+                                @click="markReportGroupAsSent(brand)"
+                                class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg font-bold text-xs shadow-sm transition-colors flex items-center justify-center gap-1.5 mt-2">
+                                <i data-lucide="send" class="w-3.5 h-3.5"></i> Mark Sent
+                            </button>
+
+                            <!-- NEW DIME HELPER BUTTON -->
+                            <button v-if="brand.vendor.toLowerCase().includes('dime')"
+                                @click="openDimeHelper(brand)"
+                                class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg font-bold text-xs shadow-sm transition-colors flex items-center justify-center gap-1.5 mt-2">
+                                <i data-lucide="external-link" class="w-3.5 h-3.5"></i> DIME Portal
+                            </button>
+
+                            <button v-else-if="brand.credits.every(c => c.status === 'Report Sent')" 
+                                class="flex-1 py-2 rounded-lg font-bold flex items-center justify-center gap-1.5 text-xs bg-blue-50 text-blue-700 border border-blue-200 cursor-default mt-2">
+                                <i data-lucide="clock" class="w-3.5 h-3.5"></i> Waiting for Resolution
+                            </button>
+
+                            <button v-else-if="!brand.credits.some(c => c.status === 'Pending') && !brand.credits.some(c => c.status === 'Report Sent')"
+                                class="flex-1 py-2 rounded-lg font-bold flex items-center justify-center gap-1.5 text-xs bg-gray-100 text-gray-600 border border-gray-200 cursor-default mt-2">
+                                <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> All Resolved
+                            </button>
+
+                            <button @click="downloadMonthlyReport(brand)" class="px-3 py-2 mt-2 w-full bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 rounded-lg font-bold flex justify-center items-center gap-1.5 text-xs transition-colors shadow-sm" title="Download CSV Breakdown">
+                                <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5 text-amber-500"></i> Download Data CSV
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- DASHBOARD TAB -->
+        <main v-if="isManagerUnlocked && activeTab === 'Dashboard'" class="flex-1 flex flex-col p-4 md:p-6 bg-gray-100 overflow-y-auto">
+            <div class="mb-4">
+                <h2 class="text-xl font-bold text-gray-900">Financial Overview</h2>
+                <p class="text-sm text-gray-500">Live aggregated metrics for all active (non-archived) promo credits.</p>
+            </div>
+            
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <!-- Top Left: Monthly Credits -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                    <h3 class="font-bold text-gray-900 mb-1">Monthly distributor credits</h3>
+                    <p class="text-xs text-gray-500 mb-4">Credit total per report month</p>
+                    <div class="h-64 relative"><canvas id="chartMonthly"></canvas></div>
+                </div>
+
+                <!-- Top Right: Top 10 Distros -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                    <h3 class="font-bold text-gray-900 mb-4">Top 10 distributors</h3>
+                    <div class="h-64 relative"><canvas id="chartDistros"></canvas></div>
+                </div>
+
+                <!-- Bottom Left: Top 10 Brands -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                    <h3 class="font-bold text-gray-900 mb-4">Top 10 brands</h3>
+                    <div class="h-64 relative"><canvas id="chartBrands"></canvas></div>
+                </div>
+
+                <!-- Bottom Right: Credits by Store -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                    <h3 class="font-bold text-gray-900 mb-4">Credits by store</h3>
+                    <div class="h-64 relative flex items-center justify-center"><canvas id="chartStores"></canvas></div>
+                </div>
+            </div>
+        </main>
+
+        <!-- MAIN DASHBOARD TAB (TRACKER) -->
+        <main v-if="isManagerUnlocked && activeTab === 'Tracker'" class="flex-1 flex flex-col p-4 md:p-6 pt-4 bg-gray-100 overflow-hidden">
+            <div class="flex flex-col sm:flex-row gap-4 md:gap-6 mb-4 shrink-0">
+                <div class="bg-white border-l-4 border-amber-500 rounded-xl p-4 md:p-5 flex-1 shadow-sm flex items-center justify-between">
+                    <div>
+                        <div class="text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Total Pending <span v-if="activeMonth !== 'All'">({{ activeMonth }})</span></div>
+                        <div class="text-2xl md:text-3xl font-extrabold text-gray-900">{{ formatCurrency(totalPending) }}</div>
+                    </div>
+                    <i data-lucide="clock" class="w-8 h-8 md:w-10 md:h-10 text-amber-200"></i>
+                </div>
+                <div class="bg-white border-l-4 border-emerald-500 rounded-xl p-4 md:p-5 flex-1 shadow-sm flex items-center justify-between">
+                    <div>
+                        <div class="text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Applied / Resolved <span v-if="activeMonth !== 'All'">({{ activeMonth }})</span></div>
+                        <div class="text-2xl md:text-3xl font-extrabold text-emerald-700">{{ formatCurrency(totalApplied) }}</div>
+                    </div>
+                    <i data-lucide="check-circle" class="w-8 h-8 md:w-10 md:h-10 text-emerald-100"></i>
+                </div>
+            </div>
+
+            <!-- ACTION BAR -->
+            <div class="flex justify-between items-end mb-4 shrink-0">
+                <h3 class="text-lg font-bold text-gray-900">Tracking Records</h3>
+                <div class="flex gap-2">
+                    <!-- EXPORT & CLEAR BUTTON -->
+                    <button @click="archiveAndExportAnnualReport" class="bg-gray-900 hover:bg-gray-800 text-amber-500 px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-bold shadow-md transition-colors">
+                        <i data-lucide="archive" class="w-4 h-4"></i> Export & Clear
+                    </button>
+                    <!-- Keep email generic draft as fallback just in case -->
+                    <button @click="showReportModal = true; refreshIcons()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-bold shadow-md transition-colors">
+                        <i data-lucide="mail-plus" class="w-4 h-4"></i> Draft Email Reports
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl border border-gray-300 shadow-sm flex-1 flex flex-col min-h-0 overflow-hidden">
+                <div class="overflow-auto flex-1 relative">
+                    <table class="excel-table min-w-max">
+                        <thead class="sticky top-0 z-20 shadow-sm bg-gray-50 text-gray-900">
+                            <tr>
+                                <th v-if="activeMonth === 'All'">Tracking Month</th>
+                                <th>Vendor (Brand)</th>
+                                <th>Distributor</th>
+                                <th>Credit Type</th>
+                                <th>Dates</th>
+                                <th>Credit amount $$$</th>
+                                <th>Date requested</th>
+                                <th>Date received</th>
+                                <th>Invoice / Credit Memo</th>
+                                <th>Proof</th>
+                                <th class="text-center">Status</th>
+                                <th class="text-center">Email Workflow</th>
+                                <th class="text-center sticky-head">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-if="filteredCredits.length === 0">
+                                <td :colspan="activeMonth === 'All' ? 13 : 12" class="text-center py-10 text-gray-500 font-medium bg-gray-50">
+                                    <span v-if="searchQuery">No results found for "{{ searchQuery }}".</span>
+                                    <span v-else>No promo credits found for {{ activeSite }} in {{ activeMonth }}.</span>
+                                </td>
+                            </tr>
+                            <tr v-for="credit in filteredCredits" :key="credit.id" class="hover:bg-emerald-50/40 transition-colors">
+                                <td v-if="activeMonth === 'All'" class="font-bold text-gray-500">{{ credit.trackingMonth }}</td>
+                                <td class="font-bold text-gray-900 flex items-center gap-2">
+                                    <i v-if="credit.needsMapping" data-lucide="alert-triangle" class="w-4 h-4 text-amber-500" title="Brand Unmapped"></i>
+                                    {{ credit.vendor }}
+                                </td>
+                                <td class="text-gray-600">{{ credit.distributor }}</td>
+                                <td>{{ credit.creditType }}</td>
+                                <td>{{ credit.dates }}</td>
+                                <td class="font-bold" :class="{
+                                    'text-emerald-600': credit.status === 'Applied',
+                                    'text-red-500 line-through': credit.status === 'Uncollectable',
+                                    'text-gray-900': credit.status === 'Pending'
+                                }">{{ formatCurrency(credit.amount) }}</td>
+                                <td>{{ credit.dateRequested }}</td>
+                                <td>{{ credit.dateReceived }}</td>
+                                <td class="font-mono text-xs text-gray-600">{{ credit.invoice }}</td>
+                                <td class="text-center">
+                                    <button v-if="credit.attachmentName" class="text-emerald-600 hover:text-emerald-800 bg-emerald-50 p-1 rounded border border-emerald-200" title="View Attachment">
+                                        <i data-lucide="paperclip" class="w-4 h-4"></i>
+                                    </button>
+                                    <span v-else class="text-gray-300">-</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="px-2.5 py-1 rounded shadow-sm text-[11px] font-bold uppercase tracking-wider" 
+                                          :class="{
+                                              'bg-emerald-100 text-emerald-800 border border-emerald-200': credit.status === 'Applied',
+                                              'bg-blue-100 text-blue-800 border border-blue-200': credit.status === 'Report Sent',
+                                              'bg-amber-100 text-amber-800 border border-amber-200': credit.status === 'Pending',
+                                              'bg-gray-200 text-gray-800 border border-gray-300': credit.status === 'Uncollectable'
+                                          }">
+                                        {{ credit.status }}
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <button v-if="credit.status === 'Pending'" @click="markAsSent(credit)" class="text-blue-600 hover:bg-blue-50 px-2 py-1 rounded border border-blue-200 text-[10px] font-bold uppercase tracking-wider transition-colors shadow-sm whitespace-nowrap">
+                                        Mark Sent
+                                    </button>
+                                    <button v-else-if="credit.status === 'Report Sent'" @click="openResolutionModal(credit)" class="text-emerald-600 hover:bg-emerald-50 px-2 py-1 rounded border border-emerald-200 text-[10px] font-bold uppercase tracking-wider transition-colors shadow-sm whitespace-nowrap">
+                                        Resolve
+                                    </button>
+                                    <span v-else class="text-gray-300">-</span>
+                                </td>
+                                <td class="text-center sticky-col">
+                                    <button @click="editCredit(credit)" class="text-gray-900 hover:text-amber-500 hover:bg-gray-900 px-3 py-1.5 rounded shadow-sm border border-gray-300 text-xs font-bold transition-all bg-white flex items-center gap-1 mx-auto">
+                                        <i data-lucide="pencil" class="w-3 h-3"></i> Edit
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+
+        <!-- OLD EMAIL REPORT DRAFTER MODAL (Kept as fallback in UI) -->
+        <div v-if="isManagerUnlocked && showReportModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-sm p-2" @click.self="showReportModal = false">
+
+            <div class="bg-white rounded-2xl shadow-2xl w-full md:w-[800px] max-w-[95vw] flex flex-col overflow-hidden max-h-[95vh] md:max-h-[85vh]">
+                <div class="px-4 md:px-6 py-4 border-b bg-gray-50 flex justify-between items-center shrink-0">
+                    <div>
+                        <h2 class="font-bold text-lg md:text-xl text-gray-900 flex items-center gap-2"><i data-lucide="mail-open" class="w-5 h-5 text-emerald-600"></i> Draft Email Reports</h2>
+                        <p class="text-xs text-gray-500 mt-0.5">Showing grouped pending credits for {{ activeSite }} ({{ activeMonth }}).</p>
+                    </div>
+                    <button @click="showReportModal = false" class="text-gray-500 hover:text-red-600 transition-colors p-1 hover:bg-gray-200 rounded"><i data-lucide="x" class="w-5 h-5"></i></button>
+                </div>
+                
+                <div class="p-4 md:p-6 overflow-y-auto flex-1 bg-gray-50">
+                    <div v-if="groupedPendingReports.length === 0" class="text-center py-10">
+                        <i data-lucide="check-circle-2" class="w-12 h-12 text-gray-300 mx-auto mb-3"></i>
+                        <p class="text-gray-500 font-bold">No pending credits found for this selection.</p>
+                    </div>
+                    
+                    <div v-for="report in groupedPendingReports" :key="report.vendor" class="bg-white border border-gray-200 rounded-xl p-4 mb-4 shadow-sm hover:border-emerald-300 transition-colors">
+                        <div class="flex justify-between items-center mb-3 border-b pb-2">
+                            <div>
+                                <h3 class="font-bold text-gray-900 text-lg">{{ report.vendor }}</h3>
+                                <p class="text-xs text-gray-500 font-mono">{{ report.email || '⚠️ No email mapped in Brand Directory' }}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm font-bold text-gray-900">{{ formatCurrency(report.total) }}</p>
+                                <p class="text-[10px] text-gray-400 uppercase tracking-wide">{{ report.credits.length }} Pending Items</p>
+                            </div>
+                        </div>
+                        
+                        <ul class="mb-4 text-xs text-gray-600 space-y-1">
+                            <li v-for="c in report.credits" :key="c.id" class="flex justify-between bg-gray-50 px-2 py-1 rounded">
+                                <span class="truncate pr-2">{{ c.creditType || 'Promo' }} ({{ c.dates }})</span>
+                                <span class="font-bold text-gray-900 whitespace-nowrap">{{ formatCurrency(c.amount) }}</span>
+                            </li>
+                        </ul>
+                        
+                        <div class="flex justify-end gap-2">
+                            <button @click="draftEmail(report)" :disabled="!report.email" :class="!report.email ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md'" class="px-4 py-2 rounded-lg font-bold flex items-center gap-2 text-sm transition-colors">
+                                <i data-lucide="send" class="w-4 h-4"></i> Draft Report
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TREES SALES REPORTS TAB -->
+        <main v-if="isManagerUnlocked && activeTab === 'Sales'" class="flex-1 flex flex-col p-4 md:p-6 pt-4 bg-gray-100 overflow-hidden">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 shrink-0 gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-gray-900 leading-tight">Trees POS Sales (Global)</h2>
+                    <p class="text-sm text-gray-500 mt-1">Showing ALL uploaded data. The aggregator automatically routes credits to Red Bluff or Redding.</p>
+                </div>
+                <div class="flex flex-col sm:flex-row w-full md:w-auto gap-3">
+                    <button v-if="isSuperAdmin && treesSalesData.length > 0" @click="clearAllSalesData" class="w-full sm:w-auto px-4 py-2 bg-red-50 border border-red-200 hover:bg-red-100 text-red-600 rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2 text-sm">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i> Clear All Data
+                    </button>
+                    <div class="relative overflow-hidden inline-block w-full sm:w-auto">
+
+                        <button class="w-full px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2 text-sm">
+                            <i data-lucide="file-up" class="w-4 h-4 text-emerald-600"></i> Upload CSV
+                        </button>
+                        <input type="file" @change="handleTreesCsvUpload" accept=".csv" class="absolute left-0 top-0 w-full h-full opacity-0 cursor-pointer">
+                    </div>
+                    <button v-if="unsyncedSalesCount > 0" @click="pushToMainTracker" class="w-full sm:w-auto px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-md transition-colors flex items-center justify-center gap-2 text-sm">
+                        <i data-lucide="git-merge" class="w-4 h-4"></i> Auto-Sort & Sync
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl border border-gray-300 shadow-sm flex-1 flex flex-col min-h-0 overflow-hidden">
+                <div class="overflow-auto flex-1">
+                    <table class="excel-table relative min-w-max">
+                        <thead class="sticky top-0 z-10 shadow-sm bg-gray-50">
+                            <tr>
+                                <th>Sync Status</th>
+                                <th>Assigned Location</th>
+                                <th v-if="activeMonth === 'All'">Tracking Month</th>
+                                <th>Product Brand</th>
+                                <th>Store Name (Raw)</th>
+                                <th>Product Name</th>
+                                <th>Discount Title</th>
+                                <th>Tracking ID</th>
+                                <th>Vendor Credit Owed</th>
+                                <th>Date Closed</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-if="filteredTreesSalesData.length === 0">
+                                <td :colspan="activeMonth === 'All' ? 10 : 9" class="text-center py-16 text-gray-500 bg-gray-50">
+                                    <i data-lucide="file-spreadsheet" class="w-12 h-12 mx-auto text-gray-300 mb-3"></i>
+                                    <div class="font-bold text-gray-700">No Sales Data Found</div>
+                                    <div class="text-sm mt-1">Upload a Trees CSV to view raw sales and generate aggregate promo credits.</div>
+                                </td>
+                            </tr>
+                            <tr v-for="sale in displayTreesSalesData" :key="sale.id" class="hover:bg-gray-50" :class="{'opacity-60 bg-gray-50': sale.status === 'Synced'}">
+                                <td class="text-center">
+                                    <span v-if="sale.status === 'Synced'" class="text-xs font-bold text-emerald-600 bg-emerald-100 px-2 py-1 rounded border border-emerald-200">SYNCED</span>
+                                    <span v-else class="text-xs font-bold text-amber-600 bg-amber-100 px-2 py-1 rounded border border-amber-200">PENDING</span>
+                                </td>
+                                <td class="font-bold text-emerald-700 bg-emerald-50 border-r border-emerald-100">{{ sale.detectedSite }}</td>
+                                <td v-if="activeMonth === 'All'" class="font-bold text-gray-500">{{ sale.month }}</td>
+                                <td class="font-bold text-gray-900">{{ sale.brand }}</td>
+                                <td class="text-gray-600 text-xs">{{ sale.storeName }}</td>
+                                <td class="text-gray-800 text-xs">{{ sale.productName }}</td>
+                                <td class="text-gray-600 text-xs">{{ sale.discountTitle }}</td>
+                                <td class="font-mono text-xs text-gray-500">{{ sale.trackingId }}</td>
+                                <td class="font-bold text-gray-900">{{ formatCurrency(sale.owed) }}</td>
+                                <td class="text-gray-600 text-xs">{{ sale.dateClosed }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+
+        <!-- BRAND DIRECTORY TAB -->
+        <main v-if="isManagerUnlocked && activeTab === 'Brands'" class="flex-1 flex flex-col p-4 md:p-6 pt-4 bg-gray-100 overflow-hidden">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 shrink-0 gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-gray-900 leading-tight">Brand Directory & Contacts</h2>
+                    <p class="text-sm text-gray-500 mt-1">Map vendor details here to enable automated location-based credit reports.</p>
+                </div>
+                <div class="flex gap-2 flex-wrap">
+                    <button v-if="selectedBrands.length > 0" @click="deleteSelectedBrands" class="px-5 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-bold shadow-md transition-colors flex items-center gap-2 text-sm whitespace-nowrap">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i> Delete Selected ({{ selectedBrands.length }})
+                    </button>
+                    <button @click="resetBrandImport(); showBrandImportModal = true;" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-md transition-colors flex items-center gap-2 text-sm whitespace-nowrap">
+                        <i data-lucide="clipboard-paste" class="w-4 h-4"></i> Paste Contact Roster
+                    </button>
+                    <!-- NEW EXPORT CSV BUTTON -->
+                    <button @click="exportVendorsAndBrandsCSV" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-md transition-colors flex items-center gap-2 text-sm whitespace-nowrap">
+                        <i data-lucide="download" class="w-4 h-4"></i> Export CSV
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl border border-gray-300 shadow-sm flex-1 flex flex-col min-h-0 overflow-hidden">
+                <div class="overflow-auto flex-1 relative">
+                    <table class="excel-table min-w-max">
+                        <thead class="sticky top-0 z-10 shadow-sm bg-gray-50 whitespace-nowrap">
+                            <tr>
+                                <th class="whitespace-nowrap">
+                                    <div class="flex items-center gap-2">
+                                        <input type="checkbox" :checked="allBrandsSelected" @change="toggleAllBrands" class="w-4 h-4 cursor-pointer text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded">
+                                        Brand
+                                    </div>
+                                </th>
+                                <th>Rep</th>
+                                <th>Email</th>
+                                <th>Name as appears in TREES</th>
+                                <th>Distro</th>
+                                <th>Asset Library</th>
+                                <th>Order From</th>
+                                <th>Payee</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- INLINE EDITING ENABLED HERE -->
+                            <tr v-for="(brand, index) in masterBrands" :key="brand.id" class="hover:bg-emerald-50/40" :class="{'bg-emerald-50/70': selectedBrands.includes(brand.id)}">
+                                <td class="font-bold text-gray-900 sticky left-0 bg-white shadow-[1px_0_0_#e5e7eb] z-10 whitespace-nowrap">
+                                    <div class="flex items-center gap-2">
+                                        <input type="checkbox" :value="brand.id" v-model="selectedBrands" class="w-4 h-4 cursor-pointer text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded">
+                                        {{ brand.vendor }}
+                                    </div>
+                                </td>
+                                <td><input type="text" :value="brand.rep" @change="updateBrandField(brand.id, 'rep', $event, brand.vendor)" placeholder="-" class="w-full min-w-[120px] bg-transparent border-b border-dashed border-transparent hover:border-gray-300 focus:border-emerald-500 outline-none px-1 py-0.5"></td>
+                                <td><input type="text" :value="brand.email" @change="updateBrandField(brand.id, 'email', $event, brand.vendor)" placeholder="-" class="w-full min-w-[180px] bg-transparent border-b border-dashed border-transparent hover:border-gray-300 focus:border-emerald-500 outline-none px-1 py-0.5 text-emerald-600 font-medium"></td>
+                                <td><input type="text" :value="brand.treesName" @change="updateBrandField(brand.id, 'treesName', $event, brand.vendor)" placeholder="-" class="w-full min-w-[160px] bg-transparent border-b border-dashed border-transparent hover:border-gray-300 focus:border-emerald-500 outline-none px-1 py-0.5"></td>
+                                <td><input type="text" :value="brand.distributor" @change="updateBrandField(brand.id, 'distributor', $event, brand.vendor)" placeholder="-" class="w-full min-w-[140px] bg-transparent border-b border-dashed border-transparent hover:border-gray-300 focus:border-emerald-500 outline-none px-1 py-0.5"></td>
+                                <td><input type="text" :value="brand.assetLibrary" @change="updateBrandField(brand.id, 'assetLibrary', $event, brand.vendor)" placeholder="-" class="w-full min-w-[180px] bg-transparent border-b border-dashed border-transparent hover:border-gray-300 focus:border-emerald-500 outline-none px-1 py-0.5 text-xs text-amber-600"></td>
+                                <td><input type="text" :value="brand.orderFrom" @change="updateBrandField(brand.id, 'orderFrom', $event, brand.vendor)" placeholder="-" class="w-full min-w-[120px] bg-transparent border-b border-dashed border-transparent hover:border-gray-300 focus:border-emerald-500 outline-none px-1 py-0.5"></td>
+                                <td><input type="text" :value="brand.payee" @change="updateBrandField(brand.id, 'payee', $event, brand.vendor)" placeholder="-" class="w-full min-w-[120px] bg-transparent border-b border-dashed border-transparent hover:border-gray-300 focus:border-emerald-500 outline-none px-1 py-0.5"></td>
+                                <td><input type="text" :value="brand.notes" @change="updateBrandField(brand.id, 'notes', $event, brand.vendor)" placeholder="-" class="w-full min-w-[180px] bg-transparent border-b border-dashed border-transparent hover:border-gray-300 focus:border-emerald-500 outline-none px-1 py-0.5 text-xs"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+
+        <!-- SYSTEM LOGS TAB (SUPER ADMIN ONLY) -->
+        <main v-if="isManagerUnlocked && isSuperAdmin && activeTab === 'Logs'" class="flex-1 flex flex-col p-4 md:p-6 bg-gray-100 overflow-hidden">
+            <div class="mb-4 flex justify-between items-end shrink-0">
+                <div>
+                    <h2 class="text-xl font-bold text-gray-900 leading-tight flex items-center gap-2"><i data-lucide="activity" class="w-5 h-5 text-amber-600"></i> System Activity Logs</h2>
+                    <p class="text-sm text-gray-500 mt-1">Real-time audit trail of all user actions. Only visible to Nicholas.</p>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl border border-gray-300 shadow-sm flex-1 flex flex-col min-h-0 overflow-hidden">
+                <div class="overflow-auto flex-1">
+                    <table class="excel-table min-w-max">
+                        <thead class="sticky top-0 z-10 shadow-sm bg-gray-50">
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>User</th>
+                                <th>Action Type</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-if="systemLogs.length === 0">
+                                <td colspan="4" class="text-center py-10 text-gray-500 font-medium bg-gray-50">No logs recorded yet.</td>
+                            </tr>
+                            <tr v-for="log in systemLogs" :key="log.id" class="hover:bg-gray-50 text-sm">
+                                <td class="text-gray-500 whitespace-nowrap">{{ new Date(log.timestamp).toLocaleString() }}</td>
+                                <td class="font-bold text-gray-900">{{ log.user }}</td>
+                                <td>
+                                    <span class="px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider" 
+                                          :class="{
+                                              'bg-emerald-100 text-emerald-800': log.actionType === 'CREATE',
+                                              'bg-amber-100 text-amber-800': log.actionType === 'UPDATE',
+                                              'bg-red-100 text-red-800': log.actionType === 'DELETE',
+                                              'bg-blue-100 text-blue-800': log.actionType === 'IMPORT',
+                                              'bg-gray-200 text-gray-800': log.actionType === 'LOGIN' || log.actionType === 'LOGOUT'
+                                          }">
+                                        {{ log.actionType }}
+                                    </span>
+                                </td>
+                                <td class="text-gray-700 w-full">{{ log.details }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+
+        <!-- ADD/EDIT PROMO MODAL -->
+        <div v-if="isManagerUnlocked && showPromoModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-sm p-2" @click.self="closePromoModal">
+
+            <div class="bg-white rounded-2xl shadow-2xl w-full md:w-[700px] max-w-[95vw] flex flex-col overflow-hidden max-h-[95vh] md:max-h-[80vh]">
+                <div class="px-4 md:px-6 py-4 border-b bg-gray-50 flex justify-between items-center shrink-0">
+                    <h2 class="font-bold text-lg md:text-xl text-gray-900 flex items-center gap-2"><i data-lucide="file-edit" class="w-5 h-5 text-emerald-600"></i> {{ editingId ? 'Edit Promo Credit' : 'Log New Credit' }}</h2>
+                    <button @click="closePromoModal" class="text-gray-500 hover:text-red-600 transition-colors p-1 hover:bg-gray-200 rounded"><i data-lucide="x" class="w-5 h-5"></i></button>
+                </div>
+                
+                <div class="p-4 md:p-6 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 overflow-y-auto">
+                    <div class="col-span-1 md:col-span-2">
+                        <label class="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Tracking Month</label>
+                        <select v-model="form.trackingMonth" class="border border-gray-300 p-2.5 w-full rounded-lg mt-1 font-bold focus:ring-2 focus:ring-emerald-500 outline-none">
+                            <option v-for="m in calendarMonths" :key="m" :value="m">{{ m }}</option>
+                        </select>
+                    </div>
+                    <div class="col-span-1 md:col-span-2 border-t border-gray-200 pt-2"></div>
+                    <div class="col-span-1 md:col-span-2 relative">
+                        <label class="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Vendor (Brand)</label>
+                        <input type="text" v-model="form.vendor" @focus="showBrandDropdown = true" @input="showBrandDropdown = true" class="border border-gray-300 p-2.5 w-full rounded-lg mt-1 font-bold focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Search Brand Name...">
+                        <div v-if="showBrandDropdown && filteredBrands.length > 0" class="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 shadow-xl rounded-lg max-h-48 overflow-y-auto z-50">
+                            <div v-for="brand in filteredBrands" :key="brand.vendor" @click="selectBrand(brand)" class="px-4 py-2 hover:bg-emerald-50 cursor-pointer border-b border-gray-100 last:border-0 flex justify-between items-center">
+                                <span class="font-bold text-gray-900">{{ brand.vendor }}</span>
+                                <span class="text-xs font-medium text-gray-400">{{ brand.distributor }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div><label class="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Distributor</label><input type="text" v-model="form.distributor" class="border border-gray-300 bg-gray-50 p-2.5 w-full rounded-lg mt-1 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"></div>
+                    <div><label class="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Credit Type</label><input type="text" v-model="form.creditType" class="border border-gray-300 p-2.5 w-full rounded-lg mt-1 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"></div>
+                    <div><label class="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Dates</label><input type="text" v-model="form.dates" class="border border-gray-300 p-2.5 w-full rounded-lg mt-1 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"></div>
+                    <div>
+                        <label class="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Credit Amount $$$</label>
+                        <div class="relative"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold">$</span><input type="number" v-model.number="form.amount" class="border border-gray-300 pl-7 p-2.5 w-full rounded-lg mt-1 font-bold text-gray-900 focus:ring-2 focus:ring-emerald-500 outline-none" step="0.01"></div>
+                    </div>
+                    <div class="col-span-1 md:col-span-2 border-t border-gray-200 pt-2"></div>
+                    <div><label class="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Date Requested</label><input type="date" v-model="form.dateRequested" class="border border-gray-300 p-2.5 w-full rounded-lg mt-1 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"></div>
+                    <div><label class="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Date Received</label><input type="date" v-model="form.dateReceived" class="border border-gray-300 p-2.5 w-full rounded-lg mt-1 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"></div>
+                    <div><label class="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Invoice / Credit Memo #</label><input type="text" v-model="form.invoice" class="border border-gray-300 p-2.5 w-full rounded-lg mt-1 font-mono text-sm focus:ring-2 focus:ring-emerald-500 outline-none"></div>
+                    <div>
+                        <label class="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Status</label>
+                        <select v-model="form.status" class="border border-gray-300 p-2.5 w-full rounded-lg mt-1 font-bold cursor-pointer focus:ring-2 focus:ring-emerald-500 outline-none" :class="{'bg-emerald-50 text-emerald-800': form.status === 'Applied', 'bg-amber-50 text-amber-800': form.status === 'Pending', 'bg-gray-50 text-gray-800': form.status === 'Uncollectable'}">
+                            <option value="Pending">Pending</option><option value="Applied">Applied</option><option value="Uncollectable">Uncollectable</option>
+                        </select>
+                    </div>
+                    <div class="col-span-1 md:col-span-2 mt-2">
+                        <label class="text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-1 block">Vendor Outcome Proof (PDF or Image)</label>
+                        <div class="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors relative">
+                            <input type="file" @change="handleFileUpload" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept="application/pdf,image/*">
+                            <i data-lucide="paperclip" class="w-6 h-6 text-gray-400 mx-auto mb-2"></i>
+                            <span v-if="!form.attachmentName" class="text-sm font-medium text-gray-500">Tap to upload email PDF/Image</span>
+                            <span v-else class="text-sm font-bold text-emerald-600">{{ form.attachmentName }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="px-4 md:px-6 py-4 border-t bg-gray-50 flex flex-col md:flex-row justify-between items-center shrink-0 gap-3">
+                    <button v-if="editingId" @click="deleteCredit" class="text-red-500 hover:text-red-700 text-sm font-bold flex items-center justify-center gap-1 w-full md:w-auto py-2"><i data-lucide="trash-2" class="w-4 h-4"></i> Delete Credit</button>
+                    <div v-else class="hidden md:block"></div>
+                    <div class="flex gap-3 w-full md:w-auto">
+                        <button @click="closePromoModal" class="flex-1 md:px-5 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-bold transition-colors">Cancel</button>
+                        <button @click="saveCredit" class="flex-1 md:px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-md transition-colors flex items-center justify-center gap-2"><i data-lucide="save" class="w-4 h-4"></i> Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- EMAIL RESOLUTION MODAL -->
+        <div v-if="isManagerUnlocked && showResolutionModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-sm p-2" @click.self="showResolutionModal = false">
+
+            <div class="bg-white rounded-2xl shadow-2xl w-full md:w-[500px] max-w-[95vw] flex flex-col overflow-hidden">
+                <div class="px-4 md:px-6 py-4 border-b bg-gray-50 flex justify-between items-center shrink-0">
+                    <div>
+                        <h2 class="font-bold text-lg md:text-xl text-gray-900 flex items-center gap-2"><i data-lucide="check-square" class="w-5 h-5 text-emerald-600"></i> Log Vendor Resolution</h2>
+                        <p class="text-xs text-gray-500 mt-0.5">Finalize credit for {{ resolutionCredit?.vendor }}</p>
+                    </div>
+                    <button @click="showResolutionModal = false" class="text-gray-500 hover:text-red-600 transition-colors p-1 hover:bg-gray-200 rounded"><i data-lucide="x" class="w-5 h-5"></i></button>
+                </div>
+                
+                <div class="p-4 md:p-6 space-y-4">
+                    <div>
+                        <label class="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Credit Memo / Invoice Number</label>
+                        <input type="text" v-model="resolutionForm.invoice" class="border border-gray-300 p-2.5 w-full rounded-lg mt-1 font-mono text-sm focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="e.g. CM-12345">
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Date Received</label>
+                        <input type="date" v-model="resolutionForm.dateReceived" class="border border-gray-300 p-2.5 w-full rounded-lg mt-1 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                    </div>
+                </div>
+                
+                <div class="px-4 md:px-6 py-4 border-t bg-gray-50 flex gap-3">
+                    <button @click="showResolutionModal = false" class="flex-1 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-bold transition-colors">Cancel</button>
+                    <button @click="submitResolution" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-md transition-colors flex items-center justify-center gap-2">
+                        <i data-lucide="check-circle" class="w-4 h-4"></i> Resolve Credit
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- NEW VISUAL BRAND IMPORT MODAL -->
+        <div v-if="isManagerUnlocked && showBrandImportModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-2 backdrop-blur-sm" @click.self="showBrandImportModal = false">
+
+            <div class="bg-white rounded-2xl shadow-2xl w-full md:w-[95vw] max-w-7xl flex flex-col overflow-hidden max-h-[95vh] md:max-h-[90vh]">
+                <div class="px-4 md:px-6 py-4 border-b bg-gray-50 flex justify-between items-center shrink-0">
+                    <h2 class="font-bold text-lg text-gray-900 flex items-center gap-2"><i data-lucide="contact" class="w-5 h-5 text-emerald-600"></i> Import Brand Directory</h2>
+                    <button @click="showBrandImportModal = false" class="text-gray-500 hover:text-red-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+                </div>
+                
+                <div class="p-4 md:p-6 flex-1 overflow-hidden flex flex-col">
+                    <div v-if="brandPastedGrid.length === 0" class="flex-1 flex flex-col">
+                        <div class="bg-gray-900 border border-gray-800 p-4 rounded-xl text-sm text-amber-500 mb-4 shadow-sm">
+                            <strong>Excel Import:</strong> Paste your entire contact roster below. <br>
+                            <span class="hidden md:inline text-gray-400"><em>Ensure you include the top header row. Once pasted, it will turn into a grid where you can visually map the exact columns before importing!</em></span>
+                        </div>
+                        <textarea v-model="brandPasteData" @input="processBrandRawPaste" class="flex-1 w-full border-2 border-dashed border-emerald-300 rounded-xl p-4 md:p-6 text-sm font-mono bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none resize-none shadow-inner transition-all" placeholder="Tap here and press Paste..."></textarea>
+                    </div>
+                    
+                    <div v-else class="flex-1 overflow-auto rounded-xl border border-gray-300 bg-white">
+                        <table class="excel-table w-full relative">
+                            <thead class="sticky top-0 z-20 shadow-md bg-gray-50">
+                                <tr>
+                                    <th v-for="(col, cIndex) in brandPastedGrid[0]" :key="'bhead-'+cIndex" class="bg-emerald-50 border-emerald-100 p-2 min-w-[120px]">
+                                        <select v-model="brandMappedHeaders[cIndex]" class="w-full text-xs font-bold text-emerald-900 bg-white border border-emerald-300 rounded p-1 cursor-pointer outline-none">
+                                            <option v-for="opt in brandAvailableHeaders" :key="opt" :value="opt">{{ opt }}</option>
+                                        </select>
+                                    </th>
+                                </tr>
+                                
+                            </thead>
+                            <tbody>
+                                <tr v-for="(row, rIndex) in brandPastedGrid.slice(0, 50)" :key="'brow-'+rIndex">
+                                    <td v-for="(cell, cIndex) in row" :key="'bcell-'+cIndex" class="text-xs truncate max-w-[200px]" :title="cell">{{ cell }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div v-if="brandPastedGrid.length > 50" class="text-center p-2 text-xs text-gray-500 font-bold bg-gray-50 border-t border-gray-200">
+                            Showing first 50 rows of {{ brandPastedGrid.length }}. All rows will be imported.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="px-4 md:px-6 py-4 border-t bg-gray-50 flex flex-col md:flex-row justify-between items-center shrink-0 gap-3">
+                    <div class="w-full md:w-auto text-center md:text-left">
+                        <span v-if="brandPastedGrid.length > 0" class="text-xs font-bold text-emerald-600 uppercase tracking-wide bg-emerald-50 px-3 py-1.5 rounded-md border border-emerald-100 inline-block">
+                            <i data-lucide="git-merge" class="w-3 h-3 inline mb-0.5"></i> Column Mapping Active
+                        </span>
+                    </div>
+                    <div class="flex gap-3 w-full md:w-auto">
+                        <button v-if="brandPastedGrid.length > 0" @click="resetBrandImport" class="flex-1 md:flex-none px-5 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-bold transition-colors">Clear & Try Again</button>
+                        <button v-else @click="showBrandImportModal = false" class="flex-1 md:flex-none px-5 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-bold transition-colors">Close</button>
+                        <button v-if="brandPastedGrid.length > 0" @click="processBrandImport" class="flex-1 md:flex-none px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-md flex items-center justify-center gap-2">
+                            <i data-lucide="zap" class="w-4 h-4"></i> Map & Import Data
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DYNAMIC GRID IMPORT MODAL (Promo Credits) -->
+        <div v-if="isManagerUnlocked && showImportModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-sm p-2" @click.self="closeImportModal">
+
+            <div class="bg-white rounded-2xl shadow-2xl w-full md:w-[95vw] max-w-7xl flex flex-col overflow-hidden max-h-[95vh] md:max-h-[90vh]">
+                <div class="px-4 md:px-6 py-4 border-b bg-gray-50 flex justify-between items-center shrink-0">
+                    <h2 class="font-bold text-lg md:text-xl text-gray-900 flex items-center gap-2"><i data-lucide="grid" class="w-5 h-5 text-emerald-600"></i> Excel Import Hub</h2>
+                    <button @click="closeImportModal" class="text-gray-500 hover:text-red-600 transition-colors p-1 hover:bg-gray-200 rounded"><i data-lucide="x" class="w-5 h-5"></i></button>
+                </div>
+                <div class="p-4 md:p-6 flex-1 overflow-hidden flex flex-col">
+                    <div v-if="pastedGrid.length === 0" class="flex-1 flex flex-col">
+                        <div class="bg-gray-900 border border-gray-800 p-4 rounded-xl text-sm text-amber-500 mb-4 shadow-sm">
+                            <strong>Excel Import:</strong> Paste your entire horizontal Excel sheet below. <br>
+                            <span class="hidden md:inline text-gray-400"><em>Ensure you include the top "Super Header" row (the row that says August, July, June) so the parser can automatically organize the chunks!</em></span>
+                        </div>
+                        <textarea v-model="rawPasteData" @input="processRawPaste" class="flex-1 w-full border-2 border-dashed border-emerald-300 rounded-xl p-4 md:p-6 text-sm font-mono bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none resize-none shadow-inner transition-all" placeholder="Tap here and press Paste..."></textarea>
+                    </div>
+                    <div v-else class="flex-1 overflow-auto rounded-xl border border-gray-300 bg-white">
+                        <table class="excel-table w-full">
+                            <thead class="sticky top-0 z-20 shadow-md bg-gray-50">
+                                <tr><th v-for="(col, cIndex) in pastedGrid[0]" :key="'super-'+cIndex" class="bg-gray-950 text-white p-2 border-gray-800 text-center text-xs">{{ detectMonthInString(col) || '-' }}</th></tr>
+                                <tr>
+                                    <th v-for="(col, cIndex) in pastedGrid[0]" :key="'head-'+cIndex" class="bg-emerald-50 border-emerald-100 p-2 min-w-[120px]">
+                                        <select v-model="mappedHeaders[cIndex]" class="w-full text-xs font-bold text-emerald-900 bg-white border border-emerald-300 rounded p-1 cursor-pointer outline-none">
+                                            <option v-for="opt in availableHeaders" :key="opt" :value="opt">{{ opt }}</option>
+                                        </select>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(row, rIndex) in displayGrid" :key="'row-'+rIndex">
+                                    <td v-for="(cell, cIndex) in row" :key="'cell-'+cIndex" class="text-xs truncate max-w-[150px]" :title="cell">{{ cell }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="px-4 md:px-6 py-4 border-t bg-gray-50 flex flex-col md:flex-row justify-between items-center shrink-0 gap-3">
+                    <div class="w-full md:w-auto text-center md:text-left">
+                        <span v-if="pastedGrid.length > 0" class="text-xs font-bold text-emerald-600 uppercase tracking-wide bg-emerald-50 px-3 py-1.5 rounded-md border border-emerald-100 inline-block"><i data-lucide="git-merge" class="w-3 h-3 inline mb-0.5"></i> Auto-chunking active</span>
+                    </div>
+                    <div class="flex gap-3 w-full md:w-auto">
+                        <button v-if="pastedGrid.length > 0" @click="resetImport" class="flex-1 md:flex-none px-5 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-bold transition-colors">Clear</button>
+                        <button v-else @click="closeImportModal" class="flex-1 md:flex-none px-5 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-bold transition-colors">Close</button>
+                        <button v-if="pastedGrid.length > 0" @click="processImport" class="flex-1 md:flex-none px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-md transition-colors flex items-center justify-center gap-2"><i data-lucide="zap" class="w-4 h-4"></i> Import</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="app.js?v=2"></script>
+</body>
+</html>
