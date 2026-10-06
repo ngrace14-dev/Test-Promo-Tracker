@@ -991,7 +991,8 @@ createApp({
         const processImport = async () => {
             let importedCount = 0;
             const superHeaders = pastedGrid.value[0];
-            const batch = writeBatch(db); 
+                        let batch = writeBatch(db); 
+            let batchCount = 0;
             
             for (let r = 2; r < pastedGrid.value.length; r++) {
                 const row = pastedGrid.value[r];
@@ -1016,6 +1017,13 @@ createApp({
                             const newDocRef = doc(collection(db, "promoCredits"));
                             batch.set(newDocRef, currentCredit);
                             importedCount++;
+                            batchCount++;
+                            
+                            if (batchCount >= 400) {
+                                await batch.commit();
+                                batch = writeBatch(db);
+                                batchCount = 0;
+                            }
                         }
                         currentCredit = getEmptyForm();
                         hasData = false;
@@ -1033,6 +1041,13 @@ createApp({
                             if (!masterBrands.value.find(b => (b.vendor || '').toLowerCase() === val.toLowerCase())) {
                                 const newBrandRef = doc(collection(db, "brands"));
                                 batch.set(newBrandRef, { vendor: val, distributor: 'Auto-Imported' });
+                                batchCount++;
+                                
+                                if (batchCount >= 400) {
+                                    await batch.commit();
+                                    batch = writeBatch(db);
+                                    batchCount = 0;
+                                }
                             }
                         }
                     }
@@ -1046,11 +1061,20 @@ createApp({
                     const newDocRef = doc(collection(db, "promoCredits"));
                     batch.set(newDocRef, currentCredit);
                     importedCount++;
+                    batchCount++;
+                    
+                    if (batchCount >= 400) {
+                        await batch.commit();
+                        batch = writeBatch(db);
+                        batchCount = 0;
+                    }
                 }
             }
             
             try {
-                await batch.commit();
+                if (batchCount > 0) {
+                    await batch.commit();
+                }
                 alert(`Successfully extracted and saved ${importedCount} promo credits to Firebase!`);
                 closeImportModal();
                 refreshIcons();
@@ -1118,28 +1142,54 @@ createApp({
             const reader = new FileReader();
             reader.onload = async (evt) => {
                 try {
-                    const text = evt.target.result;
-                    const rows = text.split(/\r?\n/);
-                    if (rows.length < 2) return alert("File is empty or invalid.");
+                                        const text = evt.target.result;
 
-                    const parseCSVRow = (str) => {
+                    const parseCSV = (str) => {
                         const result = [];
+                        let row = [];
                         let cell = '';
                         let inQuotes = false;
                         for (let i = 0; i < str.length; i++) {
                             const char = str[i];
-                            if (char === '"') { inQuotes = !inQuotes; } 
-                            else if (char === ',' && !inQuotes) { result.push(cell.trim()); cell = ''; } 
+                            const nextChar = str[i+1];
+                            if (char === '"') { 
+                                if (inQuotes && nextChar === '"') {
+                                    cell += '"';
+                                    i++;
+                                } else {
+                                    inQuotes = !inQuotes; 
+                                }
+                            } 
+                            else if (char === ',' && !inQuotes) { row.push(cell.trim()); cell = ''; } 
+                            else if (char === '\n' && !inQuotes) {
+                                row.push(cell.trim());
+                                result.push(row);
+                                row = [];
+                                cell = '';
+                            }
+                            else if (char === '\r' && !inQuotes) {
+                                if (nextChar === '\n') { i++; }
+                                row.push(cell.trim());
+                                result.push(row);
+                                row = [];
+                                cell = '';
+                            }
                             else { cell += char; }
                         }
-                        result.push(cell.trim());
+                        if (cell || row.length > 0) {
+                            row.push(cell.trim());
+                            result.push(row);
+                        }
                         return result;
                     };
 
+                    const parsedRows = parseCSV(text);
+                    if (parsedRows.length < 2) return alert("File is empty or invalid.");
+
                     let headerIdx = 0;
                     let headers = [];
-                    for (let i = 0; i < rows.length; i++) {
-                        const cols = parseCSVRow(rows[i]);
+                    for (let i = 0; i < parsedRows.length; i++) {
+                        const cols = parsedRows[i];
                         if (cols.some(c => c.toLowerCase().includes('product brand') || c.toLowerCase().includes('vendor credit owed'))) {
                             headerIdx = i;
                             headers = cols.map(h => h.replace(/["']/g, '').trim());
@@ -1155,12 +1205,12 @@ createApp({
                         return '';
                     };
 
-                    const batch = writeBatch(db);
+                    let batch = writeBatch(db);
                     let count = 0;
 
-                    for (let i = headerIdx + 1; i < rows.length; i++) {
-                        if (!rows[i].trim()) continue;
-                        const cols = parseCSVRow(rows[i]);
+                    for (let i = headerIdx + 1; i < parsedRows.length; i++) {
+                        const cols = parsedRows[i];
+                        if (cols.length === 0 || (cols.length === 1 && !cols[0].trim())) continue;
                         const rowObj = {};
                         headers.forEach((h, idx) => { rowObj[h] = cols[idx] ? cols[idx].replace(/["']/g, '') : ''; });
 
@@ -1202,10 +1252,13 @@ createApp({
 
                         if (count % 400 === 0) {
                             await batch.commit();
+                            batch = writeBatch(db);
                         }
                     }
 
-                    await batch.commit();
+                    if (count % 400 !== 0) {
+                        await batch.commit();
+                    }
                     logSystemAction("IMPORT", `Uploaded ${count} raw sales items from Trees CSV`);
                     alert(`Successfully uploaded ${count} sales items to the cloud!`);
                     e.target.value = ''; 
@@ -1234,7 +1287,8 @@ createApp({
             });
 
             let creditsCreated = 0;
-            const batch = writeBatch(db); 
+                        let batch = writeBatch(db); 
+            let batchCount = 0;
             
             for (const [key, data] of Object.entries(groupedBrands)) {
                 if (data.totalOwed > 0) {
@@ -1256,16 +1310,26 @@ createApp({
                     const newDocRef = doc(collection(db, "promoCredits"));
                     batch.set(newDocRef, payload);
                     creditsCreated++;
+                    batchCount++;
 
                     data.salesItems.forEach(saleId => {
                         const saleRef = doc(db, "treesSales", saleId);
                         batch.update(saleRef, { status: 'Synced' });
+                        batchCount++;
                     });
+                    
+                    if (batchCount >= 400) {
+                        await batch.commit();
+                        batch = writeBatch(db);
+                        batchCount = 0;
+                    }
                 }
             }
             
             try {
-                await batch.commit();
+                if (batchCount > 0) {
+                    await batch.commit();
+                }
                 logSystemAction("UPDATE", `Synced and aggregated ${creditsCreated} vendor credits`);
                 alert(`Success! Aggregated ${creditsCreated} vendor credits and pushed them to Firebase.`);
                 activeTab.value = 'Tracker'; 
@@ -1309,7 +1373,7 @@ createApp({
             let updatedCount = 0;
             let newCount = 0;
             
-            let startRow = 0;
+                        let startRow = 0;
             if (brandPastedGrid.value.length > 0) {
                 const firstRowStr = brandPastedGrid.value[0].join('').toLowerCase();
                 if (firstRowStr.includes('brand') && (firstRowStr.includes('email') || firstRowStr.includes('rep') || firstRowStr.includes('distro'))) {
@@ -1317,7 +1381,8 @@ createApp({
                 }
             }
             
-            const batch = writeBatch(db);
+            let batch = writeBatch(db);
+            let batchCount = 0;
 
             for (let r = startRow; r < brandPastedGrid.value.length; r++) {
                 const row = brandPastedGrid.value[r];
@@ -1348,17 +1413,27 @@ createApp({
                     if (Object.keys(payload).length > 0) {
                         batch.update(doc(db, "brands", existingBrand.id), payload);
                         updatedCount++;
+                        batchCount++;
                     }
                 } else {
                     payload.vendor = vendorName;
                     const newDocRef = doc(collection(db, "brands"));
                     batch.set(newDocRef, payload);
                     newCount++;
+                    batchCount++;
+                }
+                
+                if (batchCount >= 400) {
+                    await batch.commit();
+                    batch = writeBatch(db);
+                    batchCount = 0;
                 }
             }
             
             try {
-                await batch.commit();
+                if (batchCount > 0) {
+                    await batch.commit();
+                }
                 alert(`Success! Added ${newCount} new brands and updated ${updatedCount} existing entries in the cloud.`);
                 resetBrandImport();
                 showBrandImportModal.value = false;
