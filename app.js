@@ -343,7 +343,7 @@ createApp({
                 }
             });
 
-            csvContent += `,,,,,,,,,, "TOTAL:", "${formatCurrency(csvTotal)}"\n`;
+            csvContent += `,,,,,,,,,"TOTAL:","${formatCurrency(csvTotal)}"\n`;
 
             const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
@@ -604,7 +604,7 @@ createApp({
                 }
             });
 
-            csvContent += `,,,,,,,,,, "TOTAL:", "${formatCurrency(csvTotal)}"\n`;
+            csvContent += `,,,,,,,,,"TOTAL:","${formatCurrency(csvTotal)}"\n`;
 
             const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
@@ -677,7 +677,7 @@ createApp({
                 csvTotal += parseFloat(c.amount) || 0;
             });
 
-            csvContent += `,,,,,, "TOTAL:", "${formatCurrency(csvTotal)}"\n`;
+            csvContent += `,,,,,"TOTAL:","${formatCurrency(csvTotal)}"\n`;
 
             const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
