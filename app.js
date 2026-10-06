@@ -100,7 +100,7 @@ createApp({
             }
         };
 
-        const updateBrandField = async (brandId, fieldName, event) => {
+                const updateBrandField = async (brandId, fieldName, event) => {
             const newValue = event.target.value;
             try {
                 await updateDoc(doc(db, "brands", brandId), {
@@ -109,6 +109,18 @@ createApp({
             } catch (error) {
                 console.error("Error updating brand:", error);
                 alert("Failed to save changes to the cloud.");
+            }
+        };
+
+        const toggleBrandActive = async (brand) => {
+            try {
+                await updateDoc(doc(db, "brands", brand.id), {
+                    inactive: !brand.inactive
+                });
+                refreshIcons();
+            } catch (error) {
+                console.error("Error toggling brand status:", error);
+                alert("Failed to update status.");
             }
         };
 
@@ -236,16 +248,18 @@ createApp({
                 baseCredits = baseCredits.filter(c => c.trackingMonth === activeMonth.value);
             }
 
-            baseCredits.forEach(c => {
+                        baseCredits.forEach(c => {
                 const m = c.trackingMonth || 'Unknown';
                 const vendorName = c.vendor || 'Unmapped Brand';
+                const brandInfo = masterBrands.value.find(b => (b.vendor || '').toLowerCase() === vendorName.toLowerCase()) || {};
+                
+                if (brandInfo.inactive) return;
                 
                 if (!groups[m]) {
                     groups[m] = { month: m, total: 0, count: 0, credits: [], brands: {} };
                 }
                 
                 if (!groups[m].brands[vendorName]) {
-                    const brandInfo = masterBrands.value.find(b => (b.vendor || '').toLowerCase() === vendorName.toLowerCase()) || {};
                     groups[m].brands[vendorName] = {
                         vendor: vendorName,
                         month: m,
@@ -1500,8 +1514,8 @@ createApp({
 
         return {
             isManagerUnlocked, isSuperAdmin, loggedInUser, emailInput, passwordInput, authError, activeSite, activeTab,
-            treesSalesData, masterBrands, selectedBrands, allBrandsSelected, toggleAllBrands,
-            deleteSelectedBrands, updateBrandField, promoCredits, calendarMonths, activeMonth,
+                        treesSalesData, masterBrands, selectedBrands, allBrandsSelected, toggleAllBrands,
+            deleteSelectedBrands, updateBrandField, toggleBrandActive, promoCredits, calendarMonths, activeMonth,
             searchQueryInput, searchQuery, showPromoModal, showBrandDropdown, editingId, showReportModal,
             showResolutionModal, resolutionCredit, resolutionForm, markAsSent, markReportGroupAsSent,
             openResolutionModal, submitResolution, monthlyReportSummaries, downloadMonthlyReport,

@@ -521,9 +521,12 @@
                             <!-- INLINE EDITING ENABLED HERE -->
                             <tr v-for="(brand, index) in masterBrands" :key="brand.id" class="hover:bg-emerald-50/40" :class="{'bg-emerald-50/70': selectedBrands.includes(brand.id)}">
                                 <td class="font-bold text-gray-900 sticky left-0 bg-white shadow-[1px_0_0_#e5e7eb] z-10 whitespace-nowrap">
-                                    <div class="flex items-center gap-2">
+                                                                        <div class="flex items-center gap-2">
                                         <input type="checkbox" :value="brand.id" v-model="selectedBrands" class="w-4 h-4 cursor-pointer text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded">
-                                        {{ brand.vendor }}
+                                        <button @click="toggleBrandActive(brand)" title="Toggle Active Status" class="transition-colors hover:text-emerald-600">
+                                            <i :data-lucide="brand.inactive ? 'toggle-left' : 'toggle-right'" :class="brand.inactive ? 'text-gray-400 w-5 h-5' : 'text-emerald-500 w-5 h-5'"></i>
+                                        </button>
+                                        <span :class="{'text-gray-400 line-through': brand.inactive}">{{ brand.vendor }}</span>
                                     </div>
                                 </td>
                                 <td><input type="text" :value="brand.rep" @change="updateBrandField(brand.id, 'rep', $event, brand.vendor)" placeholder="-" class="w-full min-w-[120px] bg-transparent border-b border-dashed border-transparent hover:border-gray-300 focus:border-emerald-500 outline-none px-1 py-0.5"></td>
