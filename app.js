@@ -230,7 +230,7 @@ createApp({
 
         const monthlyReportSummaries = computed(() => {
             const groups = {};
-            let baseCredits = promoCredits.value.filter(c => c && c.site === activeSite.value);
+            let baseCredits = promoCredits.value.filter(c => c && c.site === activeSite.value && c.archived !== true);
             
             if (activeMonth.value !== 'All') {
                 baseCredits = baseCredits.filter(c => c.trackingMonth === activeMonth.value);
