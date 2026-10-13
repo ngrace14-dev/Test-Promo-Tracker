@@ -169,8 +169,9 @@
             </main>
         </template>
 
-        <!-- HEADER (Obsidian & Gold) - ONLY FOR EMPLOYEES -->
-        <header v-if="isManagerUnlocked" class="bg-gray-950 text-white px-4 md:px-5 py-3 flex flex-col md:flex-row justify-between items-center shrink-0 shadow-lg z-20 gap-3 md:gap-0 border-b border-gray-800">
+                <!-- HEADER (Obsidian & Gold) - ONLY FOR EMPLOYEES -->
+        <header v-if="isManagerUnlocked && !isBrandUnlocked" class="bg-gray-950 text-white px-4 md:px-5 py-3 flex flex-col md:flex-row justify-between items-center shrink-0 shadow-lg z-20 gap-3 md:gap-0 border-b border-gray-800">
+
 
             <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
                 <div class="flex items-center gap-3">
@@ -210,8 +211,9 @@
         <!-- Logic moved to selection screens above -->
 
 
-        <!-- APP TABS NAV (Obsidian Background) -->
-        <div v-if="isManagerUnlocked" class="bg-gray-950 px-4 md:px-6 pt-2 flex gap-2 shrink-0 z-10 shadow-sm overflow-x-auto no-scrollbar border-b border-gray-800">
+                <!-- APP TABS NAV (Obsidian Background) -->
+        <div v-if="isManagerUnlocked && !isBrandUnlocked" class="bg-gray-950 px-4 md:px-6 pt-2 flex gap-2 shrink-0 z-10 shadow-sm overflow-x-auto no-scrollbar border-b border-gray-800">
+
             <button @click="activeTab = 'Dashboard'" :class="activeTab === 'Dashboard' ? 'bg-gray-100 text-gray-900 font-extrabold border-t-4 border-emerald-500' : 'bg-gray-900/50 text-gray-400 hover:bg-gray-800 hover:text-white'" class="px-6 py-2 rounded-t-xl text-sm transition-colors tracking-wide whitespace-nowrap">Dashboard</button>
             <button @click="activeTab = 'Tracker'" :class="activeTab === 'Tracker' ? 'bg-gray-100 text-gray-900 font-extrabold border-t-4 border-emerald-500' : 'bg-gray-900/50 text-gray-400 hover:bg-gray-800 hover:text-white'" class="px-6 py-2 rounded-t-xl text-sm transition-colors tracking-wide whitespace-nowrap">Main Tracker</button>
             <button @click="activeTab = 'Reports'" :class="activeTab === 'Reports' ? 'bg-gray-100 text-gray-900 font-extrabold border-t-4 border-emerald-500' : 'bg-gray-900/50 text-gray-400 hover:bg-gray-800 hover:text-white'" class="px-6 py-2 rounded-t-xl text-sm transition-colors tracking-wide whitespace-nowrap">Monthly Reports</button>
@@ -220,8 +222,9 @@
             <button v-if="isSuperAdmin" @click="activeTab = 'Logs'" :class="activeTab === 'Logs' ? 'bg-gray-100 text-gray-900 font-extrabold border-t-4 border-amber-500' : 'bg-gray-900/50 text-gray-400 hover:bg-gray-800 hover:text-white'" class="px-6 py-2 rounded-t-xl text-sm transition-colors tracking-wide whitespace-nowrap"><i data-lucide="activity" class="w-3.5 h-3.5 inline mr-1 mb-0.5"></i>System Logs</button>
         </div>
 
-        <!-- SHARED GLOBAL FILTERS -->
-        <div v-if="isManagerUnlocked && activeTab !== 'Logs'" class="bg-gray-100 px-4 md:px-6 pt-4 pb-2 flex flex-col lg:flex-row justify-between items-center shrink-0 gap-3 z-10 border-b border-gray-200">
+                <!-- SHARED GLOBAL FILTERS -->
+        <div v-if="isManagerUnlocked && !isBrandUnlocked && activeTab !== 'Logs'" class="bg-gray-100 px-4 md:px-6 pt-4 pb-2 flex flex-col lg:flex-row justify-between items-center shrink-0 gap-3 z-10 border-b border-gray-200">
+
             <div class="bg-white rounded-xl shadow-sm border border-gray-300 p-1.5 flex overflow-x-auto gap-1 w-full lg:flex-1 no-scrollbar">
                 <button @click="activeMonth = 'All'" :class="activeMonth === 'All' ? 'bg-gray-900 text-emerald-500 font-bold shadow' : 'text-gray-600 hover:bg-gray-100 font-medium'" class="px-4 py-1.5 rounded-lg text-sm transition-all whitespace-nowrap">All Year</button>
                 <div class="w-px bg-gray-300 mx-1 shrink-0"></div>
@@ -240,8 +243,9 @@
             </div>
         </div>
 
-        <!-- MONTHLY REPORTS TAB (BROKEN OUT BY BRAND) -->
-        <main v-if="isManagerUnlocked && activeTab === 'Reports'" class="flex-1 flex flex-col p-4 md:p-6 bg-gray-100 overflow-y-auto">
+                <!-- MONTHLY REPORTS TAB (BROKEN OUT BY BRAND) -->
+        <main v-if="isManagerUnlocked && !isBrandUnlocked && activeTab === 'Reports'" class="flex-1 flex flex-col p-4 md:p-6 bg-gray-100 overflow-y-auto">
+
             <div class="mb-6">
                 <h2 class="text-xl font-bold text-gray-900">Monthly Brand Reports</h2>
                 <p class="text-sm text-gray-500">Reports broken out by brand for each month. Generate emails or download CSVs directly for each brand.</p>
@@ -343,8 +347,9 @@
             </div>
         </main>
 
-        <!-- DASHBOARD TAB -->
-        <main v-if="isManagerUnlocked && activeTab === 'Dashboard'" class="flex-1 flex flex-col p-4 md:p-6 bg-gray-100 overflow-y-auto">
+                <!-- DASHBOARD TAB -->
+        <main v-if="isManagerUnlocked && !isBrandUnlocked && activeTab === 'Dashboard'" class="flex-1 flex flex-col p-4 md:p-6 bg-gray-100 overflow-y-auto">
+
             <div class="mb-4">
                 <h2 class="text-xl font-bold text-gray-900">Financial Overview</h2>
                 <p class="text-sm text-gray-500">Live aggregated metrics for all active (non-archived) promo credits.</p>
@@ -378,8 +383,9 @@
             </div>
         </main>
 
-        <!-- MAIN DASHBOARD TAB (TRACKER) -->
-        <main v-if="isManagerUnlocked && activeTab === 'Tracker'" class="flex-1 flex flex-col p-4 md:p-6 pt-4 bg-gray-100 overflow-hidden">
+                <!-- MAIN DASHBOARD TAB (TRACKER) -->
+        <main v-if="isManagerUnlocked && !isBrandUnlocked && activeTab === 'Tracker'" class="flex-1 flex flex-col p-4 md:p-6 pt-4 bg-gray-100 overflow-hidden">
+
             <div class="flex flex-col sm:flex-row gap-4 md:gap-6 mb-4 shrink-0">
                 <div class="bg-white border-l-4 border-amber-500 rounded-xl p-4 md:p-5 flex-1 shadow-sm flex items-center justify-between">
                     <div>
@@ -541,8 +547,9 @@
             </div>
         </div>
 
-        <!-- TREES SALES REPORTS TAB -->
-        <main v-if="isManagerUnlocked && activeTab === 'Sales'" class="flex-1 flex flex-col p-4 md:p-6 pt-4 bg-gray-100 overflow-hidden">
+                <!-- TREES SALES REPORTS TAB -->
+        <main v-if="isManagerUnlocked && !isBrandUnlocked && activeTab === 'Sales'" class="flex-1 flex flex-col p-4 md:p-6 pt-4 bg-gray-100 overflow-hidden">
+
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 shrink-0 gap-4">
                 <div>
                     <h2 class="text-xl font-bold text-gray-900 leading-tight">Trees POS Sales (Global)</h2>
@@ -611,8 +618,9 @@
             </div>
         </main>
 
-        <!-- BRAND DIRECTORY TAB -->
-        <main v-if="isManagerUnlocked && activeTab === 'Brands'" class="flex-1 flex flex-col p-4 md:p-6 pt-4 bg-gray-100 overflow-hidden">
+                <!-- BRAND DIRECTORY TAB -->
+        <main v-if="isManagerUnlocked && !isBrandUnlocked && activeTab === 'Brands'" class="flex-1 flex flex-col p-4 md:p-6 pt-4 bg-gray-100 overflow-hidden">
+
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 shrink-0 gap-4">
                 <div>
                     <h2 class="text-xl font-bold text-gray-900 leading-tight">Brand Directory & Contacts</h2>
@@ -693,8 +701,9 @@
             </div>
         </main>
 
-        <!-- SYSTEM LOGS TAB (SUPER ADMIN ONLY) -->
-        <main v-if="isManagerUnlocked && isSuperAdmin && activeTab === 'Logs'" class="flex-1 flex flex-col p-4 md:p-6 bg-gray-100 overflow-hidden">
+                <!-- SYSTEM LOGS TAB (SUPER ADMIN ONLY) -->
+        <main v-if="isManagerUnlocked && !isBrandUnlocked && isSuperAdmin && activeTab === 'Logs'" class="flex-1 flex flex-col p-4 md:p-6 bg-gray-100 overflow-hidden">
+
             <div class="mb-4 flex justify-between items-end shrink-0">
                 <div>
                     <h2 class="text-xl font-bold text-gray-900 leading-tight flex items-center gap-2"><i data-lucide="activity" class="w-5 h-5 text-amber-600"></i> System Activity Logs</h2>

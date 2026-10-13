@@ -861,7 +861,7 @@ createApp({
         const form = ref(getEmptyForm());
         let unsubscribeBrands = null;
 
-        onMounted(() => {
+                onMounted(() => {
             refreshIcons();
 
             onAuthStateChanged(auth, (user) => {
@@ -870,6 +870,7 @@ createApp({
 
                 if (!user) {
                     isManagerUnlocked.value = false;
+                    isBrandUnlocked.value = false;
                     loggedInUser.value = '';
                     return;
                 }
@@ -878,9 +879,14 @@ createApp({
                 const managerData = systemUsers[userEmail];
 
                 if (managerData && managerData.active) {
-                    loggedInUser.value = managerData.name;
-                    activeSite.value = managerData.access[0];
-                    isManagerUnlocked.value = true;
+                    // Only unlock Manager view if we aren't currently in a Brand Portal session
+                    if (!isBrandUnlocked.value) {
+                        loggedInUser.value = managerData.name;
+                        activeSite.value = managerData.access[0];
+                        isManagerUnlocked.value = true;
+                    }
+
+                    isSuperAdmin.value = managerData.superAdmin || false;
                     
                     unsubscribeBrands = onSnapshot(collection(db, "brands"), (snapshot) => {
                         const fetchedBrands = [];
