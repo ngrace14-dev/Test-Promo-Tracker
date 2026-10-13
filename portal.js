@@ -27,13 +27,15 @@ createApp({
         const loginError = ref('');
         const lockoutRemaining = ref(0);
         const failedAttempts = ref(0);
+        const showBrandSelector = ref(false);
         
         const activeTab = ref('Dashboard');
         const currentBrand = ref(null);
         const promoCredits = ref([]);
-        const masterBrands = ref([]);
+        const allBrands = ref([]);
         const treesSalesData = ref([]);
 
+        const isDev = computed(() => loginEmail.value.toLowerCase().trim() === 'nicholas.grace@rredco.com');
         const calendarMonths = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
         const reportFilter = ref({
@@ -89,6 +91,9 @@ createApp({
 
                     if (matched) {
                         currentBrand.value = matched;
+                        if (isDev.value) {
+                            allBrands.value = brands.sort((a, b) => (a.vendor || '').localeCompare(b.vendor || ''));
+                        }
                         isAuthenticated.value = true;
                         failedAttempts.value = 0;
                         sessionStorage.setItem('brand_portal_session', JSON.stringify({
@@ -125,6 +130,12 @@ createApp({
         const handleLogout = () => {
             sessionStorage.removeItem('brand_portal_session');
             window.location.reload();
+        };
+
+        const selectBrand = (brand) => {
+            currentBrand.value = brand;
+            startDataSync();
+            logAudit('Switch Brand', `Dev switched to ${brand.vendor}`);
         };
 
         const startDataSync = () => {
@@ -329,7 +340,8 @@ createApp({
             activeTab, currentBrand, promoCredits, historicalReports, reportFilter,
             availablePromoTypes, dashboardStats, recentActivity, calendarMonths,
             handleLogin, handleLogout, generateCustomReport, downloadHistorical,
-            formatCurrency, formatDate, refreshIcons
+            formatCurrency, formatDate, refreshIcons, isDev, allBrands, selectBrand,
+            showBrandSelector
         };
     }
 }).mount('#app');

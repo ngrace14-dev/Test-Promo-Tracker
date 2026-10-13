@@ -64,9 +64,36 @@
                     <div class="bg-amber-500 p-2 rounded-lg">
                         <i data-lucide="layout-dashboard" class="w-6 h-6 text-gray-950"></i>
                     </div>
-                    <div>
-                        <h1 class="font-bold text-lg leading-tight">{{ currentBrand.vendor }} Portal</h1>
-                        <p class="text-[10px] text-amber-500 font-bold uppercase tracking-widest">Self-Service Reporting</p>
+                    <div class="relative group">
+                        <div 
+                            @click="isDev && (showBrandSelector = !showBrandSelector)"
+                            :class="{'cursor-pointer hover:bg-gray-900 p-2 -m-2 rounded-xl transition-colors': isDev}"
+                        >
+                            <div class="flex items-center gap-2">
+                                <h1 class="font-bold text-lg leading-tight">{{ currentBrand.vendor }} Portal</h1>
+                                <i v-if="isDev" data-lucide="chevron-down" class="w-4 h-4 text-amber-500"></i>
+                            </div>
+                            <p class="text-[10px] text-amber-500 font-bold uppercase tracking-widest">
+                                {{ isDev ? 'Dev Access: Switch Brand' : 'Self-Service Reporting' }}
+                            </p>
+                        </div>
+
+                        <!-- Brand Selector Dropdown -->
+                        <div v-if="isDev && showBrandSelector" class="absolute top-full left-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 py-2 z-50 max-h-[400px] overflow-y-auto">
+                            <div class="px-4 py-2 border-b border-gray-100 mb-2">
+                                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Select Brand to View</p>
+                            </div>
+                            <button 
+                                v-for="brand in allBrands" 
+                                :key="brand.id"
+                                @click="selectBrand(brand); showBrandSelector = false"
+                                class="w-full text-left px-4 py-2 hover:bg-amber-50 text-gray-900 text-sm font-bold flex items-center justify-between"
+                                :class="{'bg-amber-50 text-amber-600': currentBrand.id === brand.id}"
+                            >
+                                {{ brand.vendor }}
+                                <i v-if="currentBrand.id === brand.id" data-lucide="check" class="w-4 h-4"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div class="flex items-center gap-4">
