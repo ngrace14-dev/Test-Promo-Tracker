@@ -1917,12 +1917,18 @@ createApp({
             return Object.values(groups).sort((a, b) => calendarMonths.indexOf(b.month) - calendarMonths.indexOf(a.month));
         });
 
+                watch(activeBrand, () => {
+                    refreshIcons();
+                });
+
                 return {
-            selectedRole, isManagerUnlocked, isBrandUnlocked, isPreviewMode, activeBrand, brandTab, 
-            loggedInUser, emailInput, passwordInput, authError, 
-            brandEmailInput, brandCodeInput, brandAuthError,
-            activeSite, activeTab,
-            treesSalesData, masterBrands, selectedBrands, allBrandsSelected, toggleAllBrands,
+                    selectedRole, isManagerUnlocked, isBrandUnlocked, isPreviewMode, activeBrand, brandTab, 
+                    loggedInUser, emailInput, passwordInput, authError, 
+                    brandEmailInput, brandCodeInput, brandAuthError,
+                    isSuperAdmin,
+                    activeSite, activeTab,
+                    treesSalesData, masterBrands, selectedBrands, allBrandsSelected, toggleAllBrands,
+
             deleteSelectedBrands, updateBrandField, toggleBrandActive, promoCredits, calendarMonths, activeMonth,
             searchQueryInput, searchQuery, showPromoModal, showBrandDropdown, editingId, showReportModal,
             showResolutionModal, resolutionCredit, resolutionForm, markAsSent, markReportGroupAsSent,
