@@ -131,6 +131,35 @@ createApp({
                     }
                 };
 
+                const bulkGenerateCodes = async (forceReset = false) => {
+                    const targets = forceReset ? masterBrands.value : masterBrands.value.filter(b => !b.accessCode);
+            
+                    if (targets.length === 0) {
+                        alert("No brands selected for code generation.");
+                        return;
+                    }
+
+                    const msg = forceReset 
+                        ? `WARNING: This will wipe and regenerate access codes for ALL ${targets.length} brands. This will invalidate all previous codes. Proceed for the new month?`
+                        : `Generate codes for ${targets.length} brands?`;
+
+                    if (confirm(msg)) {
+                        try {
+                            const batch = writeBatch(db);
+                            targets.forEach(brand => {
+                                const code = Array.from({length: 4}, () => Math.random().toString(36).substring(2, 6).toUpperCase()).join('-');
+                                batch.update(doc(db, "brands", brand.id), { accessCode: code });
+                            });
+                            await batch.commit();
+                            logSystemAction("UPDATE", forceReset ? "Monthly Bulk Code Reset" : `Bulk generated codes for ${targets.length} brands`);
+                            alert(`Success! Generated new codes for ${targets.length} brands.`);
+                        } catch (error) {
+                            console.error(error);
+                            alert("Failed to update codes.");
+                        }
+                    }
+                };
+
         const toggleBrandActive = async (brand) => {
             try {
                 await updateDoc(doc(db, "brands", brand.id), {
@@ -1624,8 +1653,8 @@ createApp({
             closeImportModal, resetImport, displayGrid, processRawPaste, processImport, regenerateBrandSummary,
             regenerateMonthReports, handleTreesCsvUpload, pushToMainTracker, resetBrandImport,
             processBrandRawPaste, processBrandImport, systemLogs, refreshIcons, clearAllSalesData,
-            detectMonthInString, drawCharts, openDimeHelper, exportVendorsAndBrandsCSV, generateAccessCode,
-            brandCredits, brandStats, brandHistory
+                        detectMonthInString, drawCharts, openDimeHelper, exportVendorsAndBrandsCSV, generateAccessCode,
+            brandCredits, brandStats, brandHistory, bulkGenerateCodes
         };
     }
 }).mount('#app');

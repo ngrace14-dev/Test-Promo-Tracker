@@ -614,8 +614,12 @@
                     <button v-if="selectedBrands.length > 0" @click="deleteSelectedBrands" class="px-5 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-bold shadow-md transition-colors flex items-center gap-2 text-sm whitespace-nowrap">
                         <i data-lucide="trash-2" class="w-4 h-4"></i> Delete Selected ({{ selectedBrands.length }})
                     </button>
-                    <button @click="resetBrandImport(); showBrandImportModal = true;" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-md transition-colors flex items-center gap-2 text-sm whitespace-nowrap">
+                                        <button @click="resetBrandImport(); showBrandImportModal = true;" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-md transition-colors flex items-center gap-2 text-sm whitespace-nowrap">
                         <i data-lucide="clipboard-paste" class="w-4 h-4"></i> Paste Contact Roster
+                    </button>
+                    <!-- NEW BULK GENERATE BUTTON -->
+                                        <button @click="bulkGenerateCodes(true)" class="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-gray-950 rounded-lg font-bold shadow-md transition-colors flex items-center gap-2 text-sm whitespace-nowrap">
+                        <i data-lucide="refresh-cw" class="w-4 h-4"></i> Reset All Brand Codes
                     </button>
                     <!-- NEW EXPORT CSV BUTTON -->
                     <button @click="exportVendorsAndBrandsCSV" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-md transition-colors flex items-center gap-2 text-sm whitespace-nowrap">
@@ -660,10 +664,10 @@
                                 </td>
                                 <td><input type="text" :value="brand.rep" @change="updateBrandField(brand.id, 'rep', $event, brand.vendor)" placeholder="-" class="w-full min-w-[120px] bg-transparent border-b border-dashed border-transparent hover:border-gray-300 focus:border-emerald-500 outline-none px-1 py-0.5"></td>
                                 <td><input type="text" :value="brand.email" @change="updateBrandField(brand.id, 'email', $event, brand.vendor)" placeholder="-" class="w-full min-w-[180px] bg-transparent border-b border-dashed border-transparent hover:border-gray-300 focus:border-emerald-500 outline-none px-1 py-0.5 text-emerald-600 font-medium"></td>
-                                <td>
+                                                                <td>
                                     <div class="flex items-center gap-2">
                                         <input type="text" :value="brand.accessCode" @change="updateBrandField(brand.id, 'accessCode', $event, brand.vendor)" placeholder="Generate Code..." class="w-full min-w-[140px] bg-transparent border-b border-dashed border-transparent hover:border-gray-300 focus:border-emerald-500 outline-none px-1 py-0.5 font-mono text-xs text-amber-600 font-bold">
-                                        <button @click="generateAccessCode(brand.id)" class="text-gray-400 hover:text-amber-500 transition-colors">
+                                        <button @click="generateAccessCode(brand.id)" title="Refresh Individual Code" class="text-gray-400 hover:text-amber-500 transition-colors">
                                             <i data-lucide="refresh-cw" class="w-3 h-3"></i>
                                         </button>
                                     </div>
