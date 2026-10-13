@@ -35,6 +35,7 @@ createApp({
         const activeTab = ref('Dashboard');
         const currentBrand = ref(null);
         const promoCredits = ref([]);
+        const publishedReports = ref([]); // Sprint 4: Reports published by Admin
         const allBrands = ref([]);
         const treesSalesData = ref([]);
 
@@ -160,6 +161,17 @@ createApp({
                 snapshot.forEach(doc => credits.push({ id: doc.id, ...doc.data() }));
                 promoCredits.value = credits;
                 updateStats();
+            });
+
+            // SPRINT 4: Fetch published reports for this brand
+            const reportsQuery = query(collection(db, "reports"), 
+                where("brandId", "==", currentBrand.value.id)
+            );
+            
+            onSnapshot(reportsQuery, (snapshot) => {
+                const reports = [];
+                snapshot.forEach(doc => reports.push({ id: doc.id, ...doc.data() }));
+                publishedReports.value = reports.sort((a, b) => b.publishedAt - a.publishedAt);
             });
 
             // Fetch raw sales for this brand to allow self-service CSV generation

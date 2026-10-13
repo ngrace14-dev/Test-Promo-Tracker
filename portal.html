@@ -130,6 +130,9 @@
                 <button @click="activeTab = 'Dashboard'" :class="activeTab === 'Dashboard' ? 'border-amber-500 text-amber-600' : 'border-transparent text-gray-500 hover:text-gray-700'" class="py-4 border-b-2 font-bold text-sm transition-all flex items-center gap-2">
                     <i data-lucide="pie-chart" class="w-4 h-4"></i> Dashboard
                 </button>
+                <button @click="activeTab = 'Published'" :class="activeTab === 'Published' ? 'border-amber-500 text-amber-600' : 'border-transparent text-gray-500 hover:text-gray-700'" class="py-4 border-b-2 font-bold text-sm transition-all flex items-center gap-2">
+                    <i data-lucide="cloud-download" class="w-4 h-4"></i> Published Reports
+                </button>
                 <button @click="activeTab = 'Reports'" :class="activeTab === 'Reports' ? 'border-amber-500 text-amber-600' : 'border-transparent text-gray-500 hover:text-gray-700'" class="py-4 border-b-2 font-bold text-sm transition-all flex items-center gap-2">
                     <i data-lucide="file-text" class="w-4 h-4"></i> Report Builder
                 </button>
@@ -145,7 +148,45 @@
             <main class="flex-1 overflow-y-auto p-6 bg-gray-50">
                 
                 <!-- DASHBOARD TAB -->
-                <div v-if="activeTab === 'Dashboard'" class="max-w-7xl mx-auto space-y-6">
+                <!-- ... existing code ... -->
+
+                <!-- PUBLISHED REPORTS TAB (SPRINT 4) -->
+                <div v-if="activeTab === 'Published'" class="max-w-5xl mx-auto space-y-6">
+                    <div class="mb-4">
+                        <h2 class="text-xl font-black text-gray-900 leading-tight">Published Itemized Reports</h2>
+                        <p class="text-sm text-gray-500 mt-1">Directly download reports verified and published by RREDCO accounting.</p>
+                    </div>
+
+                    <div v-if="publishedReports.length === 0" class="bg-white p-20 rounded-2xl border-2 border-dashed border-gray-200 text-center">
+                        <i data-lucide="cloud-off" class="w-12 h-12 text-gray-300 mx-auto mb-4"></i>
+                        <h3 class="text-lg font-bold text-gray-400">No reports published yet</h3>
+                        <p class="text-sm text-gray-400">Once accounting finalizes your monthly breakdown, they will appear here.</p>
+                    </div>
+
+                    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div v-for="report in publishedReports" :key="report.id" class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all group">
+                            <div class="bg-gray-950 p-4 flex justify-between items-center">
+                                <span class="bg-amber-500 text-gray-950 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest">{{ report.month }} {{ report.year }}</span>
+                                <span class="text-gray-400 text-[10px] font-bold">{{ formatDate(report.publishedAt) }}</span>
+                            </div>
+                            <div class="p-6">
+                                <div class="flex justify-between items-end mb-6">
+                                    <div>
+                                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Total Credit</p>
+                                        <h3 class="text-2xl font-black text-gray-900">{{ formatCurrency(report.totalAmount) }}</h3>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Market</p>
+                                        <p class="text-sm font-bold text-gray-700">{{ report.site }}</p>
+                                    </div>
+                                </div>
+                                <button @click="downloadHistorical({month: report.month, credits: promoCredits.filter(c => c.trackingMonth === report.month && c.site === report.site)})" class="w-full bg-gray-100 hover:bg-gray-950 text-gray-900 hover:text-amber-500 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 group-hover:scale-[1.02]">
+                                    <i data-lucide="download" class="w-4 h-4"></i> Download Itemized CSV
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                         <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
                             <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Open Programs</p>
