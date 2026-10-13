@@ -35,12 +35,22 @@ const auth = getAuth(firebaseApp);
 const { createApp, ref, computed, nextTick, onMounted, watch } = window.Vue;
 
 createApp({
-    setup() {
+        setup() {
+        const selectedRole = ref(null); // 'Employee' or 'Brand'
         const isManagerUnlocked = ref(false);
+        const isBrandUnlocked = ref(false);
+        const activeBrand = ref(null);
+        const brandTab = ref('Dashboard');
+        
         const loggedInUser = ref('');
         const emailInput = ref('');
         const passwordInput = ref('');
         const authError = ref('');
+
+        const brandEmailInput = ref('');
+        const brandCodeInput = ref('');
+        const brandAuthError = ref('');
+        
         const activeSite = ref('Red Bluff');
         const activeTab = ref('Tracker');
         
@@ -873,14 +883,47 @@ createApp({
             });
         });
 
-        const handleLogin = () => {
+                const handleLogin = () => {
             authError.value = '';
             signInWithEmailAndPassword(auth, emailInput.value.trim(), passwordInput.value)
                 .then(() => { emailInput.value = ''; passwordInput.value = ''; refreshIcons(); })
                 .catch((error) => { authError.value = "Invalid email or password."; });
         };
 
-        const forceLock = () => { signOut(auth).then(() => { isManagerUnlocked.value = false; loggedInUser.value = ''; }); };
+        const handleBrandLogin = () => {
+            brandAuthError.value = '';
+            const email = brandEmailInput.value.trim().toLowerCase();
+            const code = brandCodeInput.value.trim();
+
+            if (!email || !code) {
+                brandAuthError.value = "Email and Code are required.";
+                return;
+            }
+
+            const matched = masterBrands.value.find(b => 
+                b.email && b.email.toLowerCase().split(/[,;\s]+/).includes(email) &&
+                b.accessCode === code
+            );
+
+            if (matched) {
+                activeBrand.value = matched;
+                isBrandUnlocked.value = true;
+                logSystemAction("LOGIN", `Brand Partner Login: ${matched.vendor}`);
+                refreshIcons();
+            } else {
+                brandAuthError.value = "Access Denied. Check email and code.";
+            }
+        };
+
+        const forceLock = () => { 
+            signOut(auth).then(() => { 
+                isManagerUnlocked.value = false; 
+                isBrandUnlocked.value = false;
+                selectedRole.value = null;
+                activeBrand.value = null;
+                loggedInUser.value = ''; 
+            }); 
+        };
 
         const filteredBrands = computed(() => {
             const query = (form.value.vendor || '').toLowerCase();
@@ -1534,23 +1577,55 @@ createApp({
             }
         };
 
+                const brandCredits = computed(() => {
+            if (!activeBrand.value) return [];
+            return promoCredits.value.filter(c => 
+                (c.vendor || '').toLowerCase() === (activeBrand.value.vendor || '').toLowerCase()
+            ).sort((a, b) => calendarMonths.indexOf(b.trackingMonth) - calendarMonths.indexOf(a.month));
+        });
+
+        const brandStats = computed(() => {
+            const credits = brandCredits.value;
+            return {
+                pending: credits.filter(c => c.status === 'Pending').reduce((s, c) => s + (parseFloat(c.amount) || 0), 0),
+                applied: credits.filter(c => c.status === 'Applied').reduce((s, c) => s + (parseFloat(c.amount) || 0), 0),
+                total: credits.reduce((s, c) => s + (parseFloat(c.amount) || 0), 0)
+            };
+        });
+
+        const brandHistory = computed(() => {
+            const groups = {};
+            brandCredits.value.forEach(c => {
+                const m = c.trackingMonth || 'Unknown';
+                if (!groups[m]) groups[m] = { month: m, total: 0, count: 0, credits: [] };
+                groups[m].total += (parseFloat(c.amount) || 0);
+                groups[m].count++;
+                groups[m].credits.push(c);
+            });
+            return Object.values(groups).sort((a, b) => calendarMonths.indexOf(b.month) - calendarMonths.indexOf(a.month));
+        });
+
         return {
-            isManagerUnlocked, isSuperAdmin, loggedInUser, emailInput, passwordInput, authError, activeSite, activeTab,
-                        treesSalesData, masterBrands, selectedBrands, allBrandsSelected, toggleAllBrands,
+            selectedRole, isManagerUnlocked, isBrandUnlocked, activeBrand, brandTab, 
+            loggedInUser, emailInput, passwordInput, authError, 
+            brandEmailInput, brandCodeInput, brandAuthError,
+            activeSite, activeTab,
+            treesSalesData, masterBrands, selectedBrands, allBrandsSelected, toggleAllBrands,
             deleteSelectedBrands, updateBrandField, toggleBrandActive, promoCredits, calendarMonths, activeMonth,
             searchQueryInput, searchQuery, showPromoModal, showBrandDropdown, editingId, showReportModal,
             showResolutionModal, resolutionCredit, resolutionForm, markAsSent, markReportGroupAsSent,
             openResolutionModal, submitResolution, monthlyReportSummaries, downloadMonthlyReport,
             groupedPendingReports, draftEmail, archiveAndExportAnnualReport, showImportModal,
             rawPasteData, pastedGrid, mappedHeaders, showBrandImportModal, brandPasteData, brandPastedGrid,
-            brandMappedHeaders, brandAvailableHeaders, availableHeaders, form, handleLogin, forceLock,
+            brandMappedHeaders, brandAvailableHeaders, availableHeaders, form, handleLogin, handleBrandLogin, forceLock,
             filteredBrands, selectBrand, formatCurrency, filteredCredits, filteredTreesSalesData,
             displayTreesSalesData, totalPending, totalApplied, unsyncedSalesCount, openPromoModal,
             closePromoModal, handleFileUpload, saveCredit, editCredit, deleteCredit, openImportModal,
             closeImportModal, resetImport, displayGrid, processRawPaste, processImport, regenerateBrandSummary,
             regenerateMonthReports, handleTreesCsvUpload, pushToMainTracker, resetBrandImport,
-                        processBrandRawPaste, processBrandImport, systemLogs, refreshIcons, clearAllSalesData,
-            detectMonthInString, drawCharts, openDimeHelper, exportVendorsAndBrandsCSV, generateAccessCode
+            processBrandRawPaste, processBrandImport, systemLogs, refreshIcons, clearAllSalesData,
+            detectMonthInString, drawCharts, openDimeHelper, exportVendorsAndBrandsCSV, generateAccessCode,
+            brandCredits, brandStats, brandHistory
         };
     }
 }).mount('#app');
