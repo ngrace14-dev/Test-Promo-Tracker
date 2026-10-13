@@ -89,7 +89,7 @@
                 <button @click="brandTab = 'History'" :class="brandTab === 'History' ? 'bg-gray-100 text-gray-900 font-extrabold' : 'text-gray-400'" class="px-6 py-2 rounded-t-xl text-sm transition-colors">Historical Reports</button>
             </div>
 
-                        <main v-if="isBrandUnlocked" class="flex-1 overflow-y-auto p-6 bg-gray-100">
+            <main v-if="isBrandUnlocked" class="flex-1 overflow-y-auto p-6 bg-gray-100">
                 <!-- SPRINT 8: BRAND IDENTITY & ADMIN SELECTOR -->
                 <div class="max-w-6xl mx-auto mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
                     <div class="bg-white px-6 py-4 rounded-2xl shadow-sm border border-gray-200 flex items-center gap-4 w-full md:w-auto">
@@ -116,7 +116,6 @@
                 </div>
 
                 <!-- DASHBOARD TAB -->
-
                 <div v-if="brandTab === 'Dashboard'" class="max-w-6xl mx-auto space-y-6">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
@@ -297,7 +296,8 @@
                         </div>
                     </div>
                 </div>
-                        </main>
+            </main>
+        </template>
 
 
                 <!-- HEADER (Obsidian & Gold) - ONLY FOR EMPLOYEES -->
@@ -1139,4 +1139,42 @@
                             <strong>Excel Import:</strong> Paste your entire horizontal Excel sheet below. <br>
                             <span class="hidden md:inline text-gray-400"><em>Ensure you include the top "Super Header" row (the row that says August, July, June) so the parser can automatically organize the chunks!</em></span>
                         </div>
-                        <textarea v-model="rawPasteData" @input="processRawPaste" class="flex-1 w-full border-2 border-dashed border-emerald-300 rounded-xl p-4 md:p-6 text-sm font-mono bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none resize-n
+                        <textarea v-model="rawPasteData" @input="processRawPaste" class="flex-1 w-full border-2 border-dashed border-emerald-300 rounded-xl p-4 md:p-6 text-sm font-mono bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none resize-none shadow-inner transition-all" placeholder="Tap here and press Paste..."></textarea>
+                    </div>
+                    <div v-else class="flex-1 overflow-auto rounded-xl border border-gray-300 bg-white">
+                        <table class="excel-table w-full">
+                            <thead class="sticky top-0 z-20 shadow-md bg-gray-50">
+                                <tr><th v-for="(col, cIndex) in pastedGrid[0]" :key="'super-'+cIndex" class="bg-gray-950 text-white p-2 border-gray-800 text-center text-xs">{{ detectMonthInString(col) || '-' }}</th></tr>
+                                <tr>
+                                    <th v-for="(col, cIndex) in pastedGrid[0]" :key="'head-'+cIndex" class="bg-emerald-50 border-emerald-100 p-2 min-w-[120px]">
+                                        <select v-model="mappedHeaders[cIndex]" class="w-full text-xs font-bold text-emerald-900 bg-white border border-emerald-300 rounded p-1 cursor-pointer outline-none">
+                                            <option v-for="opt in availableHeaders" :key="opt" :value="opt">{{ opt }}</option>
+                                        </select>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(row, rIndex) in displayGrid" :key="'row-'+rIndex">
+                                    <td v-for="(cell, cIndex) in row" :key="'cell-'+cIndex" class="text-xs truncate max-w-[150px]" :title="cell">{{ cell }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="px-4 md:px-6 py-4 border-t bg-gray-50 flex flex-col md:flex-row justify-between items-center shrink-0 gap-3">
+                    <div class="w-full md:w-auto text-center md:text-left">
+                        <span v-if="pastedGrid.length > 0" class="text-xs font-bold text-emerald-600 uppercase tracking-wide bg-emerald-50 px-3 py-1.5 rounded-md border border-emerald-100 inline-block"><i data-lucide="git-merge" class="w-3 h-3 inline mb-0.5"></i> Auto-chunking active</span>
+                    </div>
+                    <div class="flex gap-3 w-full md:w-auto">
+                        <button v-if="pastedGrid.length > 0" @click="resetImport" class="flex-1 md:flex-none px-5 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-bold transition-colors">Clear</button>
+                        <button v-else @click="closeImportModal" class="flex-1 md:flex-none px-5 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-bold transition-colors">Close</button>
+                        <button v-if="pastedGrid.length > 0" @click="processImport" class="flex-1 md:flex-none px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-md transition-colors flex items-center justify-center gap-2"><i data-lucide="zap" class="w-4 h-4"></i> Import</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="portal.js?v=3"></script>
+</body>
+</html>
