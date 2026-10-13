@@ -1632,7 +1632,7 @@ createApp({
 
         // SPRINT 2: ADMIN REPORT PUBLISHING
         const isPublishing = ref(false);
-        const publishReport = async (report) => {
+                const publishReport = async (report) => {
             if (isPublishing.value) return;
             
             const brandInfo = masterBrands.value.find(b => (b.vendor || '').toLowerCase() === (report.vendor || '').toLowerCase());
@@ -1643,12 +1643,38 @@ createApp({
             
             if (!confirm(confirmMsg)) return;
             
+            await executePublish(report, brandInfo, reportMonth);
+        };
+
+        const pushMonthToBrands = async (monthGroup) => {
+            if (isPublishing.value) return;
+            const targets = monthGroup.brandList.filter(b => !isReportPublished(b, monthGroup.month));
+            
+            if (targets.length === 0) return alert("All brands for this month are already published.");
+            
+            if (!confirm(`This will publish itemized reports to the Brand Portal for ALL ${targets.length} brands in ${monthGroup.month}. Proceed?`)) return;
+            
             isPublishing.value = true;
+            let successCount = 0;
+            
+            for (const brand of targets) {
+                const brandInfo = masterBrands.value.find(b => (b.vendor || '').toLowerCase() === (brand.vendor || '').toLowerCase());
+                if (brandInfo) {
+                    try {
+                        await executePublish(brand, brandInfo, monthGroup.month, false);
+                        successCount++;
+                    } catch (e) { console.error(`Failed to publish ${brand.vendor}`, e); }
+                }
+            }
+            
+            isPublishing.value = false;
+            alert(`Successfully published ${successCount} reports to the Brand Portal.`);
+            logSystemAction(AUDIT_ACTIONS.REPORT_PUBLISHED, `Bulk published ${successCount} reports for ${monthGroup.month}`);
+        };
+
+        const executePublish = async (report, brandInfo, reportMonth, showSuccess = true) => {
             try {
-                // 1. Generate the CSV blob (Reusing existing logic)
-                let csvContent = "Location,Date & Time,Brand,Product Name,Transaction ID,Quantity Sold,Unit Price,Total Before Tax,Discount Title,Discount Amount,Credit Owed,Entry Type\n";
-                // ... (CSV generation logic simplified for snippet, ideally extract this to a helper)
-                // For Sprint 2 PoC, we'll create the record first
+                if (!isPublishing.value) isPublishing.value = true;
                 
                 const reportId = `${report.vendor}_${reportMonth}_${activeSite.value}`.replace(/\s+/g, '_');
                 const reportData = {
@@ -1665,15 +1691,19 @@ createApp({
 
                 await setDoc(doc(db, "reports", reportId), reportData);
                 
-                await logSystemAction(AUDIT_ACTIONS.REPORT_PUBLISHED, `Published report for ${report.vendor} (${reportMonth})`);
-                alert(`Success! Report published to portal for ${report.vendor}.`);
+                if (showSuccess) {
+                    await logSystemAction(AUDIT_ACTIONS.REPORT_PUBLISHED, `Published report for ${report.vendor} (${reportMonth})`);
+                    alert(`Success! Report published to portal for ${report.vendor}.`);
+                }
             } catch (error) {
                 console.error("Publish Error:", error);
-                alert("Failed to publish report.");
+                if (showSuccess) alert("Failed to publish report.");
+                throw error;
             } finally {
-                isPublishing.value = false;
+                if (showSuccess) isPublishing.value = false;
             }
         };
+
 
         const isReportPublished = (brand, month) => {
             return publishedReports.value.some(r => 
@@ -1846,11 +1876,12 @@ createApp({
             regenerateMonthReports, handleTreesCsvUpload, pushToMainTracker, resetBrandImport,
             processBrandRawPaste, processBrandImport, systemLogs, refreshIcons, clearAllSalesData,
                         detectMonthInString, drawCharts, openDimeHelper, exportVendorsAndBrandsCSV, generateAccessCode,
-                        brandCredits, brandStats, brandHistory, bulkGenerateCodes,
-                        brandFilters, exportFilteredBrandData,
-            builder, builderOptions, builderPreviewData, runBuilderExport,
-            publishReport, isReportPublished, isPublishing
+                                    brandCredits, brandStats, brandHistory, bulkGenerateCodes,
+                                    brandFilters, exportFilteredBrandData,
+                        builder, builderOptions, builderPreviewData, runBuilderExport,
+                        publishReport, isReportPublished, isPublishing, pushMonthToBrands
         };
+
 
     }
 }).mount('#app');
