@@ -50,8 +50,15 @@ createApp({
 
         const brandEmailInput = ref('');
         const brandCodeInput = ref('');
-        const brandAuthError = ref('');
+                const brandAuthError = ref('');
         
+        const brandFilters = ref({
+            month: 'All',
+            site: 'All',
+            status: 'All',
+            search: ''
+        });
+
         const activeSite = ref('Red Bluff');
         const activeTab = ref('Tracker');
         
