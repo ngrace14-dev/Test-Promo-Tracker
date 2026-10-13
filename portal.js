@@ -28,6 +28,8 @@ createApp({
         const lockoutRemaining = ref(0);
         const failedAttempts = ref(0);
         const showBrandSelector = ref(false);
+        const reportStep = ref(1); // 1: Period Selection, 2: Filtering & Export
+        const isDataFetched = ref(false);
         
         const activeTab = ref('Dashboard');
         const currentBrand = ref(null);
@@ -134,6 +136,8 @@ createApp({
 
         const selectBrand = (brand) => {
             currentBrand.value = brand;
+            isDataFetched.value = false;
+            reportStep.value = 1;
             startDataSync();
             logAudit('Switch Brand', `Dev switched to ${brand.vendor}`);
         };
@@ -230,6 +234,19 @@ createApp({
                     details: details
                 });
             } catch (e) { console.error(e); }
+        };
+
+        const unlockReportFilters = () => {
+            if (!reportFilter.value.startMonth || !reportFilter.value.endMonth) return;
+            
+            // Simulate data fetch/download trigger
+            isLoggingIn.value = true;
+            setTimeout(() => {
+                isLoggingIn.value = false;
+                isDataFetched.value = true;
+                reportStep.value = 2;
+                logAudit('Data Fetch', `Fetched data for ${reportFilter.value.startMonth} - ${reportFilter.value.endMonth}`);
+            }, 800);
         };
 
         const generateCustomReport = () => {
@@ -341,7 +358,7 @@ createApp({
             availablePromoTypes, dashboardStats, recentActivity, calendarMonths,
             handleLogin, handleLogout, generateCustomReport, downloadHistorical,
             formatCurrency, formatDate, refreshIcons, isDev, allBrands, selectBrand,
-            showBrandSelector
+            showBrandSelector, reportStep, isDataFetched, unlockReportFilters
         };
     }
 }).mount('#app');
