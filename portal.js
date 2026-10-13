@@ -42,7 +42,10 @@ createApp({
         const allBrands = ref([]);
         const treesSalesData = ref([]);
 
-        const isDev = computed(() => loginEmail.value.toLowerCase().trim() === 'nicholas.grace@rredco.com');
+        const isDev = computed(() => {
+            const email = loginEmail.value.toLowerCase().trim();
+            return email === 'nicholas.grace@rredco.com' || email === 'accounting@rredco.com';
+        });
         const calendarMonths = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
         const reportFilter = ref({

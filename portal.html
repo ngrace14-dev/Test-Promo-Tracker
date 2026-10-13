@@ -140,7 +140,7 @@
                     <i data-lucide="file-text" class="w-4 h-4"></i> Report Builder
                 </button>
                 <button @click="activeTab = 'History'" :class="activeTab === 'History' ? 'border-amber-500 text-amber-600' : 'border-transparent text-gray-500 hover:text-gray-700'" class="py-4 border-b-2 font-bold text-sm transition-all flex items-center gap-2">
-                    <i data-lucide="history" class="w-4 h-4"></i> Historical Reports
+                    <i data-lucide="history" class="w-4 h-4"></i> Historical Reports: <span class="text-amber-500">{{ currentBrand.vendor }}</span>
                 </button>
                 <button @click="activeTab = 'Support'" :class="activeTab === 'Support' ? 'border-amber-500 text-amber-600' : 'border-transparent text-gray-500 hover:text-gray-700'" class="py-4 border-b-2 font-bold text-sm transition-all flex items-center gap-2">
                     <i data-lucide="help-circle" class="w-4 h-4"></i> Support
