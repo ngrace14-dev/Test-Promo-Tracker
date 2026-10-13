@@ -133,6 +133,9 @@
                 <button @click="activeTab = 'Published'" :class="activeTab === 'Published' ? 'border-amber-500 text-amber-600' : 'border-transparent text-gray-500 hover:text-gray-700'" class="py-4 border-b-2 font-bold text-sm transition-all flex items-center gap-2">
                     <i data-lucide="cloud-download" class="w-4 h-4"></i> Published Reports
                 </button>
+                <button @click="activeTab = 'Requests'" :class="activeTab === 'Requests' ? 'border-amber-500 text-amber-600' : 'border-transparent text-gray-500 hover:text-gray-700'" class="py-4 border-b-2 font-bold text-sm transition-all flex items-center gap-2">
+                    <i data-lucide="clipboard-list" class="w-4 h-4"></i> My Requests
+                </button>
                 <button @click="activeTab = 'Reports'" :class="activeTab === 'Reports' ? 'border-amber-500 text-amber-600' : 'border-transparent text-gray-500 hover:text-gray-700'" class="py-4 border-b-2 font-bold text-sm transition-all flex items-center gap-2">
                     <i data-lucide="file-text" class="w-4 h-4"></i> Report Builder
                 </button>
@@ -180,9 +183,14 @@
                                         <p class="text-sm font-bold text-gray-700">{{ report.site }}</p>
                                     </div>
                                 </div>
-                                <button @click="downloadHistorical({month: report.month, credits: promoCredits.filter(c => c.trackingMonth === report.month && c.site === report.site)})" class="w-full bg-gray-100 hover:bg-gray-950 text-gray-900 hover:text-amber-500 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 group-hover:scale-[1.02]">
-                                    <i data-lucide="download" class="w-4 h-4"></i> Download Itemized CSV
-                                </button>
+                                <div class="flex flex-col gap-2">
+                                    <button @click="downloadHistorical({month: report.month, credits: promoCredits.filter(c => c.trackingMonth === report.month && c.site === report.site)})" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-900 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+                                        <i data-lucide="download" class="w-4 h-4 text-amber-600"></i> Download Data CSV
+                                    </button>
+                                    <button @click="openRequestModal(report)" class="w-full bg-gray-950 hover:bg-gray-800 text-amber-500 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+                                        <i data-lucide="plus-circle" class="w-4 h-4"></i> Submit Credit Request
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -319,8 +327,51 @@
                     </div>
                 </div>
 
-                <!-- HISTORY TAB -->
-                <div v-if="activeTab === 'History'" class="max-w-7xl mx-auto">
+                <!-- REQUESTS TAB (SPRINT 5) -->
+                <div v-if="activeTab === 'Requests'" class="max-w-6xl mx-auto space-y-6">
+                    <div class="flex justify-between items-end">
+                        <div>
+                            <h2 class="text-xl font-black text-gray-900 leading-tight">My Credit Requests</h2>
+                            <p class="text-sm text-gray-500 mt-1">Track the status of your submitted promotion credits.</p>
+                        </div>
+                        <button @click="openRequestModal()" class="bg-gray-950 text-amber-500 px-6 py-3 rounded-xl font-black text-sm uppercase tracking-widest flex items-center gap-2 shadow-xl hover:bg-gray-800 transition-all">
+                            <i data-lucide="plus" class="w-5 h-5"></i> New Request
+                        </button>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                        <table class="w-full text-left">
+                            <thead class="bg-gray-50 border-b border-gray-200">
+                                <tr>
+                                    <th class="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Request ID</th>
+                                    <th class="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Program</th>
+                                    <th class="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Amount</th>
+                                    <th class="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</th>
+                                    <th class="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Submitted</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                <tr v-for="req in creditRequests" :key="req.id" class="hover:bg-gray-50 transition-colors">
+                                    <td class="p-4 font-mono text-xs font-bold text-gray-900">{{ req.requestId }}</td>
+                                    <td class="p-4">
+                                        <p class="font-bold text-gray-900 text-sm">{{ req.promoType }}</p>
+                                        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{{ req.promoGroup }}</p>
+                                    </td>
+                                    <td class="p-4 font-black text-gray-900">{{ formatCurrency(req.amount) }}</td>
+                                    <td class="p-4">
+                                        <span class="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+                                            {{ req.statusId }}
+                                        </span>
+                                    </td>
+                                    <td class="p-4 text-xs text-gray-500">{{ formatDate(req.createdAt) }}</td>
+                                </tr>
+                                <tr v-if="creditRequests.length === 0">
+                                    <td colspan="5" class="p-20 text-center text-gray-400 font-bold">No requests submitted yet.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                         <table class="w-full text-left border-collapse">
                             <thead>
@@ -404,6 +455,67 @@
 
             </main>
         </template>
+
+        <!-- SPRINT 5: CREDIT REQUEST MODAL -->
+        <div v-if="showRequestModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[200] p-4" @click.self="showRequestModal = false">
+            <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+                <div class="bg-gray-950 p-6 flex justify-between items-center">
+                    <h2 class="text-xl font-black text-amber-500 uppercase tracking-widest">Submit Credit Request</h2>
+                    <button @click="showRequestModal = false" class="text-gray-400 hover:text-white transition-colors">
+                        <i data-lucide="x" class="w-6 h-6"></i>
+                    </button>
+                </div>
+                
+                <div class="p-8 space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Promotion Family</label>
+                            <select v-model="requestForm.promoGroup" class="w-full border-2 border-gray-100 p-3 rounded-xl focus:border-amber-500 outline-none font-bold mt-1">
+                                <option value="" disabled>Select Family...</option>
+                                <option v-for="group in promoGroups" :key="group" :value="group">{{ group }}</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Specific Promotion</label>
+                            <select v-model="requestForm.promoType" :disabled="!requestForm.promoGroup" class="w-full border-2 border-gray-100 p-3 rounded-xl focus:border-amber-500 outline-none font-bold mt-1 disabled:bg-gray-50">
+                                <option value="" disabled>Select Type...</option>
+                                <option v-for="type in availablePromoTypesForGroup" :key="type" :value="type">{{ type }}</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Market / Location</label>
+                            <select v-model="requestForm.site" class="w-full border-2 border-gray-100 p-3 rounded-xl focus:border-amber-500 outline-none font-bold mt-1">
+                                <option value="Red Bluff">Red Bluff</option>
+                                <option value="Redding">Redding / Sundial</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Requested Amount</label>
+                            <div class="relative mt-1">
+                                <span class="absolute left-4 top-1/2 -translate-y-1/2 font-black text-gray-400">$</span>
+                                <input type="number" v-model.number="requestForm.amount" class="w-full border-2 border-gray-100 p-3 pl-8 rounded-xl focus:border-amber-500 outline-none font-black text-gray-900" step="0.01">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Notes / Internal Reference</label>
+                        <textarea v-model="requestForm.notes" class="w-full border-2 border-gray-100 p-3 rounded-xl focus:border-amber-500 outline-none font-medium mt-1 h-24 resize-none" placeholder="Add any details for the accounting team..."></textarea>
+                    </div>
+                </div>
+
+                <div class="p-6 bg-gray-50 border-t border-gray-100 flex gap-4">
+                    <button @click="showRequestModal = false" class="flex-1 py-4 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl font-black uppercase tracking-widest text-sm transition-all">Cancel</button>
+                    <button @click="submitCreditRequest" :disabled="isSubmitting" class="flex-[2] py-4 bg-gray-950 hover:bg-gray-800 text-amber-500 rounded-xl font-black uppercase tracking-widest text-sm transition-all flex items-center justify-center gap-2 shadow-xl">
+                        <i v-if="isSubmitting" class="animate-spin" data-lucide="refresh-cw"></i>
+                        {{ isSubmitting ? 'Submitting...' : 'Submit Credit Request' }}
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Firebase Scripts -->
