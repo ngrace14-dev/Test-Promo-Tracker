@@ -925,9 +925,11 @@
                 </main>
 
 
-            <div class="mb-4 flex justify-between items-end shrink-0">
-                <div>
-                    <h2 class="text-xl font-bold text-gray-900 leading-tight flex items-center gap-2"><i data-lucide="activity" class="w-5 h-5 text-amber-600"></i> System Activity Logs</h2>
+                        <!-- SYSTEM LOGS TAB -->
+            <main v-if="isManagerUnlocked && !isBrandUnlocked && activeTab === 'Logs'" class="flex-1 flex flex-col p-4 md:p-6 bg-gray-100 overflow-hidden">
+                <div class="mb-4 flex justify-between items-end shrink-0">
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-900 leading-tight flex items-center gap-2"><i data-lucide="activity" class="w-5 h-5 text-amber-600"></i> System Activity Logs</h2>
                     <p class="text-sm text-gray-500 mt-1">Real-time audit trail of all user actions. Only visible to Nicholas.</p>
                 </div>
             </div>
