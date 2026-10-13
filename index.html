@@ -413,13 +413,25 @@
                                 </div>
                             </div>
 
-                            <!-- Action Buttons Attached to Each Brand -->
-                            <button v-if="brand.credits.some(c => c.status === 'Pending')" 
-                                @click="draftEmail(brand)" :disabled="!brand.email" 
-                                :class="!brand.email ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'" 
-                                class="flex-1 py-2 rounded-lg font-bold flex items-center justify-center gap-1.5 text-xs transition-colors">
-                                <i data-lucide="mail" class="w-3.5 h-3.5"></i> Draft Email
-                            </button>
+                                                        <!-- Action Buttons Attached to Each Brand -->
+                            <div class="flex flex-col gap-2 mt-2">
+                                <button v-if="brand.credits.some(c => c.status === 'Pending')" 
+                                    @click="publishReport(brand)" 
+                                    :disabled="isPublishing || isReportPublished(brand, monthGroup.month)"
+                                    :class="isReportPublished(brand, monthGroup.month) ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-amber-500 hover:bg-amber-600 text-gray-950 shadow-sm'" 
+                                    class="flex-1 py-2 rounded-lg font-black flex items-center justify-center gap-1.5 text-[10px] uppercase tracking-wider transition-all border border-transparent">
+                                    <i :data-lucide="isReportPublished(brand, monthGroup.month) ? 'check-circle' : 'cloud-upload'" class="w-3.5 h-3.5"></i> 
+                                    {{ isReportPublished(brand, monthGroup.month) ? 'Published to Portal' : 'Publish to Brand Portal' }}
+                                </button>
+
+                                <button v-if="brand.credits.some(c => c.status === 'Pending')" 
+                                    @click="draftEmail(brand)" :disabled="!brand.email" 
+                                    :class="!brand.email ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'" 
+                                    class="flex-1 py-2 rounded-lg font-bold flex items-center justify-center gap-1.5 text-xs transition-colors">
+                                    <i data-lucide="mail" class="w-3.5 h-3.5"></i> Draft Email
+                                </button>
+                            </div>
+
                             
                             <button v-if="brand.credits.some(c => c.status === 'Pending')"
                                 @click="markReportGroupAsSent(brand)"

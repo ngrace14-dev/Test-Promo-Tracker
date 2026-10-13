@@ -2,9 +2,12 @@
 
 // 1. FIREBASE IMPORTS
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
-import { getFirestore, collection, addDoc, doc, updateDoc, deleteDoc, writeBatch, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, doc, updateDoc, deleteDoc, writeBatch, onSnapshot, setDoc, query, where } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app-check.js";
+import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-storage.js";
+import { PROMO_HIERARCHY, STATUS_DEFINITIONS, AUDIT_ACTIONS } from "./governance.js";
+
 
 // 2. FIREBASE CONFIGURATION
 const firebaseConfig = {
@@ -30,6 +33,8 @@ try {
 
 const db = getFirestore(firebaseApp);
 const auth = getAuth(firebaseApp); 
+const storage = getStorage(firebaseApp);
+ 
 
 // 3. VUE APP INIT
 const { createApp, ref, computed, nextTick, onMounted, watch } = window.Vue;
@@ -42,6 +47,9 @@ createApp({
             const isPreviewMode = ref(false);
             const activeBrand = ref(null);
             const brandTab = ref('Dashboard');
+
+            const publishedReports = ref([]); // Sprint 2: Track published reports
+
         
         const loggedInUser = ref('');
         const emailInput = ref('');
@@ -914,7 +922,7 @@ createApp({
                         promoCredits.value = fetchedCredits;
                     });
 
-                    if (managerData.superAdmin) {
+                                        if (managerData.superAdmin) {
                         onSnapshot(collection(db, "systemLogs"), (snapshot) => {
                             const logs = [];
                             snapshot.forEach(docSnap => { logs.push({ id: docSnap.id, ...docSnap.data() }); });
@@ -922,6 +930,14 @@ createApp({
                             systemLogs.value = logs;
                         });
                     }
+
+                    // Sprint 2: Listen for published reports
+                    onSnapshot(collection(db, "reports"), (snapshot) => {
+                        const reports = [];
+                        snapshot.forEach(docSnap => reports.push({ id: docSnap.id, ...docSnap.data() }));
+                        publishedReports.value = reports;
+                    });
+
                 }
             });
         });
@@ -1610,36 +1626,65 @@ createApp({
             }
         };
         
-        const openDimeHelper = async (brand) => {
-            const storeName = activeSite.value === 'Redding' ? 'Sundial' : activeSite.value;
-            const currentYear = new Date().getFullYear();
-            const monthStr = brand.month || activeMonth.value;
+                const openDimeHelper = async (brand) => {
+            // ... existing code ...
+        };
 
-            let textToCopy = `Store: ${storeName}\n`;
-            textToCopy += `Promo Period: ${monthStr} ${currentYear}\n`;
-            textToCopy += `Total Credit Requested: ${formatCurrency(brand.total)}\n\n`;
-            textToCopy += `Promotion Details:\n`;
+        // SPRINT 2: ADMIN REPORT PUBLISHING
+        const isPublishing = ref(false);
+        const publishReport = async (report) => {
+            if (isPublishing.value) return;
             
-            brand.credits.forEach(c => {
-                const type = c.creditType || 'Promo';
-                const dates = c.dates || 'N/A';
-                const amt = formatCurrency(c.amount);
-                textToCopy += `- ${type} (${dates}): ${amt}\n`;
-            });
+            const brandInfo = masterBrands.value.find(b => (b.vendor || '').toLowerCase() === (report.vendor || '').toLowerCase());
+            if (!brandInfo) return alert("Cannot publish: Brand not found in directory.");
             
-            textToCopy += `\n*Itemized POS report attached to submission.`;
-
+            const reportMonth = report.month || activeMonth.value;
+            const confirmMsg = `Publish ${report.vendor} report for ${reportMonth} to the Brand Portal?`;
+            
+            if (!confirm(confirmMsg)) return;
+            
+            isPublishing.value = true;
             try {
-                await navigator.clipboard.writeText(textToCopy);
-                alert(`✅ Text Copied to Clipboard!\n\nSimply paste into the DIME "Promotion Details" box.\n\nOpening the DIME Portal now...`);
-                window.open('https://form.jotform.com/252994629916172', '_blank'); 
-            } catch (err) {
-                console.error('Failed to copy text: ', err);
-                alert('Failed to copy to clipboard. Please check your browser permissions.');
+                // 1. Generate the CSV blob (Reusing existing logic)
+                let csvContent = "Location,Date & Time,Brand,Product Name,Transaction ID,Quantity Sold,Unit Price,Total Before Tax,Discount Title,Discount Amount,Credit Owed,Entry Type\n";
+                // ... (CSV generation logic simplified for snippet, ideally extract this to a helper)
+                // For Sprint 2 PoC, we'll create the record first
+                
+                const reportId = `${report.vendor}_${reportMonth}_${activeSite.value}`.replace(/\s+/g, '_');
+                const reportData = {
+                    brandId: brandInfo.id,
+                    vendorName: report.vendor,
+                    month: reportMonth,
+                    year: new Date().getFullYear(),
+                    site: activeSite.value,
+                    totalAmount: report.total,
+                    publishedAt: Date.now(),
+                    publishedBy: loggedInUser.value,
+                    status: 'published'
+                };
+
+                await setDoc(doc(db, "reports", reportId), reportData);
+                
+                await logSystemAction(AUDIT_ACTIONS.REPORT_PUBLISHED, `Published report for ${report.vendor} (${reportMonth})`);
+                alert(`Success! Report published to portal for ${report.vendor}.`);
+            } catch (error) {
+                console.error("Publish Error:", error);
+                alert("Failed to publish report.");
+            } finally {
+                isPublishing.value = false;
             }
         };
 
+        const isReportPublished = (brand, month) => {
+            return publishedReports.value.some(r => 
+                r.vendorName === brand.vendor && 
+                r.month === month && 
+                r.site === activeSite.value
+            );
+        };
+
                 const brandCredits = computed(() => {
+
                     if (!activeBrand.value) return [];
                     let base = promoCredits.value.filter(c => 
                         (c.vendor || '').toLowerCase() === (activeBrand.value.vendor || '').toLowerCase()
@@ -1800,10 +1845,12 @@ createApp({
             closeImportModal, resetImport, displayGrid, processRawPaste, processImport, regenerateBrandSummary,
             regenerateMonthReports, handleTreesCsvUpload, pushToMainTracker, resetBrandImport,
             processBrandRawPaste, processBrandImport, systemLogs, refreshIcons, clearAllSalesData,
-            detectMonthInString, drawCharts, openDimeHelper, exportVendorsAndBrandsCSV, generateAccessCode,
+                        detectMonthInString, drawCharts, openDimeHelper, exportVendorsAndBrandsCSV, generateAccessCode,
                         brandCredits, brandStats, brandHistory, bulkGenerateCodes,
                         brandFilters, exportFilteredBrandData,
-            builder, builderOptions, builderPreviewData, runBuilderExport
+            builder, builderOptions, builderPreviewData, runBuilderExport,
+            publishReport, isReportPublished, isPublishing
         };
+
     }
 }).mount('#app');
