@@ -1660,12 +1660,68 @@ createApp({
                     return base.sort((a, b) => calendarMonths.indexOf(b.trackingMonth) - calendarMonths.indexOf(a.trackingMonth));
                 });
 
-                const brandFilters = ref({
-                    month: 'All',
+                const builder = ref({
+                    startMonth: 'January',
+                    endMonth: 'December',
                     site: 'All',
-                    status: 'All',
-                    search: ''
+                    promo: 'All',
+                    productSearch: '',
+                    groupBy: 'Promotion',
+                    exportMode: 'single'
                 });
+
+                const builderOptions = computed(() => {
+                    if (!activeBrand.value) return { promos: [] };
+                    const promos = new Set(promoCredits.value
+                        .filter(c => (c.vendor || '').toLowerCase() === (activeBrand.value.vendor || '').toLowerCase())
+                        .map(c => c.creditType).filter(Boolean));
+                    return { promos: Array.from(promos).sort() };
+                });
+
+                const builderPreviewData = computed(() => {
+                    if (!activeBrand.value) return [];
+                    let base = promoCredits.value.filter(c => (c.vendor || '').toLowerCase() === (activeBrand.value.vendor || '').toLowerCase());
+            
+                    const sIdx = calendarMonths.indexOf(builder.value.startMonth);
+                    const eIdx = calendarMonths.indexOf(builder.value.endMonth);
+            
+                    base = base.filter(c => {
+                        const mIdx = calendarMonths.indexOf(c.trackingMonth);
+                        const monthMatch = mIdx >= sIdx && mIdx <= eIdx;
+                        const siteMatch = builder.value.site === 'All' || c.site === builder.value.site;
+                        const promoMatch = builder.value.promo === 'All' || c.creditType === builder.value.promo;
+                        const prodMatch = !builder.value.productSearch || (c.creditType || '').toLowerCase().includes(builder.value.productSearch.toLowerCase());
+                        return monthMatch && siteMatch && promoMatch && prodMatch;
+                    });
+
+                    return base;
+                });
+
+                const runBuilderExport = () => {
+                    const data = builderPreviewData.value;
+                    if (data.length === 0) return alert("No matching records to export.");
+
+                    if (builder.value.exportMode === 'single') {
+                        downloadAsCSV(data, `${activeBrand.value.vendor}_Master_Report`);
+                    } else {
+                        // Split logic
+                        const groups = {};
+                        const keyField = builder.value.exportMode === 'promo' ? 'creditType' : 'site';
+                
+                        data.forEach(c => {
+                            const k = c[keyField] || 'Uncategorized';
+                            if (!groups[k]) groups[k] = [];
+                            groups[k].push(c);
+                        });
+
+                        Object.entries(groups).forEach(([name, groupData], index) => {
+                            setTimeout(() => {
+                                downloadAsCSV(groupData, `${activeBrand.value.vendor}_${name.replace(/[^a-z0-9]/gi, '_')}`);
+                            }, index * 300); // Stagger downloads to prevent browser blocking
+                        });
+                    }
+                    logSystemAction("EXPORT", `Builder Export: ${activeBrand.value.vendor} - Mode: ${builder.value.exportMode}`);
+                };
 
                 const exportFilteredBrandData = () => {
                     const data = brandCredits.value;
@@ -1739,7 +1795,8 @@ createApp({
             processBrandRawPaste, processBrandImport, systemLogs, refreshIcons, clearAllSalesData,
             detectMonthInString, drawCharts, openDimeHelper, exportVendorsAndBrandsCSV, generateAccessCode,
                         brandCredits, brandStats, brandHistory, bulkGenerateCodes,
-            brandFilters, exportFilteredBrandData
+                        brandFilters, exportFilteredBrandData,
+            builder, builderOptions, builderPreviewData, runBuilderExport
         };
     }
 }).mount('#app');
