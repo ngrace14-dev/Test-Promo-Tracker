@@ -320,8 +320,13 @@
                 <!-- APP TABS NAV (Obsidian Background) -->
         <div v-if="isManagerUnlocked && !isBrandUnlocked" class="bg-gray-950 px-4 md:px-6 pt-2 flex gap-2 shrink-0 z-10 shadow-sm overflow-x-auto no-scrollbar border-b border-gray-800">
 
-            <button @click="activeTab = 'Dashboard'" :class="activeTab === 'Dashboard' ? 'bg-gray-100 text-gray-900 font-extrabold border-t-4 border-emerald-500' : 'bg-gray-900/50 text-gray-400 hover:bg-gray-800 hover:text-white'" class="px-6 py-2 rounded-t-xl text-sm transition-colors tracking-wide whitespace-nowrap">Dashboard</button>
+                        <button @click="activeTab = 'Dashboard'" :class="activeTab === 'Dashboard' ? 'bg-gray-100 text-gray-900 font-extrabold border-t-4 border-emerald-500' : 'bg-gray-900/50 text-gray-400 hover:bg-gray-800 hover:text-white'" class="px-6 py-2 rounded-t-xl text-sm transition-colors tracking-wide whitespace-nowrap">Dashboard</button>
+            <button @click="activeTab = 'Intake'" :class="activeTab === 'Intake' ? 'bg-gray-100 text-gray-900 font-extrabold border-t-4 border-amber-500' : 'bg-gray-900/50 text-gray-400 hover:bg-gray-800 hover:text-white'" class="px-6 py-2 rounded-t-xl text-sm transition-colors tracking-wide whitespace-nowrap flex items-center gap-2">
+                Brand Requests 
+                <span v-if="creditRequests.length > 0" class="bg-amber-500 text-gray-950 text-[10px] px-1.5 py-0.5 rounded-full">{{ creditRequests.filter(r => r.statusId === 'SUBMITTED').length }}</span>
+            </button>
             <button @click="activeTab = 'Tracker'" :class="activeTab === 'Tracker' ? 'bg-gray-100 text-gray-900 font-extrabold border-t-4 border-emerald-500' : 'bg-gray-900/50 text-gray-400 hover:bg-gray-800 hover:text-white'" class="px-6 py-2 rounded-t-xl text-sm transition-colors tracking-wide whitespace-nowrap">Main Tracker</button>
+
             <button @click="activeTab = 'Reports'" :class="activeTab === 'Reports' ? 'bg-gray-100 text-gray-900 font-extrabold border-t-4 border-emerald-500' : 'bg-gray-900/50 text-gray-400 hover:bg-gray-800 hover:text-white'" class="px-6 py-2 rounded-t-xl text-sm transition-colors tracking-wide whitespace-nowrap">Monthly Reports</button>
             <button @click="activeTab = 'Sales'" :class="activeTab === 'Sales' ? 'bg-gray-100 text-gray-900 font-extrabold border-t-4 border-emerald-500' : 'bg-gray-900/50 text-gray-400 hover:bg-gray-800 hover:text-white'" class="px-6 py-2 rounded-t-xl text-sm transition-colors tracking-wide flex items-center gap-2 whitespace-nowrap">Trees Sales CSV <span v-if="filteredTreesSalesData.length > 0 && activeTab !== 'Sales'" class="bg-amber-500 text-gray-950 text-[10px] px-1.5 py-0.5 rounded-full">{{ filteredTreesSalesData.length }}</span></button>
             <button @click="activeTab = 'Brands'" :class="activeTab === 'Brands' ? 'bg-gray-100 text-gray-900 font-extrabold border-t-4 border-emerald-500' : 'bg-gray-900/50 text-gray-400 hover:bg-gray-800 hover:text-white'" class="px-6 py-2 rounded-t-xl text-sm transition-colors tracking-wide whitespace-nowrap">Brand Directory</button>
@@ -823,8 +828,77 @@
             </div>
         </main>
 
-                <!-- SYSTEM LOGS TAB (SUPER ADMIN ONLY) -->
-        <main v-if="isManagerUnlocked && !isBrandUnlocked && isSuperAdmin && activeTab === 'Logs'" class="flex-1 flex flex-col p-4 md:p-6 bg-gray-100 overflow-hidden">
+                <!-- BRAND REQUEST INTAKE TAB (SPRINT 7) -->
+                <main v-if="isManagerUnlocked && !isBrandUnlocked && activeTab === 'Intake'" class="flex-1 flex flex-col p-4 md:p-6 bg-gray-100 overflow-hidden">
+                    <div class="mb-6 flex justify-between items-end">
+                        <div>
+                            <h2 class="text-xl font-black text-gray-900 uppercase">Self-Service Intake Queue</h2>
+                            <p class="text-sm text-gray-500">Incoming credit requests and documentation submitted via the Brand Portal.</p>
+                        </div>
+                        <div class="flex gap-4">
+                            <div class="bg-white p-3 rounded-xl border border-gray-200 shadow-sm flex items-center gap-3">
+                                <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">New Requests</span>
+                                <span class="text-xl font-black text-amber-500">{{ creditRequests.filter(r => r.statusId === 'SUBMITTED').length }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl border border-gray-300 shadow-sm flex-1 flex flex-col min-h-0 overflow-hidden">
+                        <div class="overflow-auto flex-1">
+                            <table class="excel-table w-full">
+                                <thead class="sticky top-0 z-10 bg-gray-50 shadow-sm">
+                                    <tr>
+                                        <th>Status</th>
+                                        <th>ID</th>
+                                        <th>Brand</th>
+                                        <th>Program</th>
+                                        <th>Amount</th>
+                                        <th>Proof</th>
+                                        <th>Submitted</th>
+                                        <th class="text-center">Workflow</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="req in creditRequests" :key="req.id" class="hover:bg-gray-50">
+                                        <td class="text-center">
+                                            <span :style="{ backgroundColor: getStatusColor(req.statusId) + '20', color: getStatusColor(req.statusId) }" class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border" :style="{ borderColor: getStatusColor(req.statusId) + '40' }">
+                                                {{ getStatusDisplayName(req.statusId) }}
+                                            </span>
+                                        </td>
+                                        <td class="font-mono text-xs font-bold">{{ req.requestId }}</td>
+                                        <td class="font-bold text-gray-900">{{ req.vendorName }}</td>
+                                        <td>
+                                            <p class="text-sm font-bold text-gray-800">{{ req.promoType }}</p>
+                                            <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{{ req.promoGroup }}</p>
+                                        </td>
+                                        <td class="font-black text-gray-900">{{ formatCurrency(req.amount) }}</td>
+                                        <td>
+                                            <a v-if="req.proofUrl" :href="req.proofUrl" target="_blank" class="flex items-center gap-1.5 text-xs font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-100">
+                                                <i data-lucide="file-text" class="w-3 h-3"></i> View Proof
+                                            </a>
+                                            <span v-else class="text-gray-300 text-xs">No Proof</span>
+                                        </td>
+                                        <td class="text-xs text-gray-500 font-medium">{{ new Date(req.createdAt).toLocaleDateString() }}</td>
+                                        <td class="text-center p-2">
+                                            <div class="flex gap-1 justify-center">
+                                                <button v-if="req.statusId === 'SUBMITTED'" @click="updateRequestStatus(req, 'VALIDATED')" class="bg-blue-600 text-white px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-blue-700">Validate</button>
+                                                <button v-if="req.statusId === 'VALIDATED'" @click="updateRequestStatus(req, 'ACCOUNTING_REVIEW')" class="bg-purple-600 text-white px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-purple-700">Send to Accounting</button>
+                                        
+                                                <button v-if="req.statusId === 'ACCOUNTING_REVIEW'" @click="reconcileRequest(req, { creditMemoNumber: 'CM-'+req.requestId, appliedDate: new Date().toISOString() })" class="bg-emerald-600 text-white px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700">Mark Applied</button>
+                                        
+                                                <button @click="updateRequestStatus(req, 'REJECTED')" class="text-red-500 hover:bg-red-50 px-2 py-1 rounded text-[10px] font-black uppercase">Deny</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr v-if="creditRequests.length === 0">
+                                        <td colspan="8" class="text-center py-20 text-gray-400 font-bold">The intake queue is currently empty.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </main>
+
 
             <div class="mb-4 flex justify-between items-end shrink-0">
                 <div>

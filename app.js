@@ -49,6 +49,8 @@ createApp({
             const brandTab = ref('Dashboard');
 
             const publishedReports = ref([]); // Sprint 2: Track published reports
+            const creditRequests = ref([]); // Sprint 7: New Brand Requests
+
 
         
         const loggedInUser = ref('');
@@ -931,12 +933,20 @@ createApp({
                         });
                     }
 
-                    // Sprint 2: Listen for published reports
+                                        // Sprint 2: Listen for published reports
                     onSnapshot(collection(db, "reports"), (snapshot) => {
                         const reports = [];
                         snapshot.forEach(docSnap => reports.push({ id: docSnap.id, ...docSnap.data() }));
                         publishedReports.value = reports;
                     });
+
+                    // Sprint 7: Listen for incoming credit requests from brands
+                    onSnapshot(collection(db, "creditRequests"), (snapshot) => {
+                        const reqs = [];
+                        snapshot.forEach(docSnap => reqs.push({ id: docSnap.id, ...docSnap.data() }));
+                        creditRequests.value = reqs.sort((a, b) => b.createdAt - a.createdAt);
+                    });
+
 
                 }
             });
@@ -1705,13 +1715,60 @@ createApp({
         };
 
 
-        const isReportPublished = (brand, month) => {
+                const isReportPublished = (brand, month) => {
             return publishedReports.value.some(r => 
                 r.vendorName === brand.vendor && 
                 r.month === month && 
                 r.site === activeSite.value
             );
         };
+
+        // SPRINT 7: ADMIN RECONCILIATION & WORKFLOW
+        const updateRequestStatus = async (request, newStatusId) => {
+            try {
+                const oldStatus = request.statusId;
+                await updateDoc(doc(db, "creditRequests", request.id), {
+                    statusId: newStatusId,
+                    updatedAt: Date.now()
+                });
+                
+                await logSystemAction(AUDIT_ACTIONS.STATUS_CHANGE, {
+                    requestId: request.requestId,
+                    from: oldStatus,
+                    to: newStatusId
+                });
+            } catch (error) {
+                console.error("Error updating status:", error);
+                alert("Failed to update status.");
+            }
+        };
+
+        const reconcileRequest = async (request, reconData) => {
+            try {
+                await updateDoc(doc(db, "creditRequests", request.id), {
+                    ...reconData,
+                    statusId: 'APPLIED',
+                    updatedAt: Date.now()
+                });
+                
+                await logSystemAction(AUDIT_ACTIONS.STATUS_CHANGE, `Reconciled & Applied Request ${request.requestId}`);
+                alert("Request successfully reconciled and closed.");
+            } catch (error) {
+                console.error("Reconciliation Error:", error);
+                alert("Failed to reconcile.");
+            }
+        };
+
+        const getStatusDisplayName = (statusId) => {
+            const status = STATUS_DEFINITIONS.find(s => s.id === statusId);
+            return status ? status.displayName : statusId;
+        };
+
+        const getStatusColor = (statusId) => {
+            const status = STATUS_DEFINITIONS.find(s => s.id === statusId);
+            return status ? status.color : '#94a3b8';
+        };
+
 
                 const brandCredits = computed(() => {
 
@@ -1878,9 +1935,12 @@ createApp({
                         detectMonthInString, drawCharts, openDimeHelper, exportVendorsAndBrandsCSV, generateAccessCode,
                                     brandCredits, brandStats, brandHistory, bulkGenerateCodes,
                                     brandFilters, exportFilteredBrandData,
-                        builder, builderOptions, builderPreviewData, runBuilderExport,
-                        publishReport, isReportPublished, isPublishing, pushMonthToBrands
+                                                builder, builderOptions, builderPreviewData, runBuilderExport,
+                        publishReport, isReportPublished, isPublishing, pushMonthToBrands,
+                        creditRequests, updateRequestStatus, reconcileRequest, getStatusDisplayName, getStatusColor,
+                        STATUS_DEFINITIONS
         };
+
 
 
     }
