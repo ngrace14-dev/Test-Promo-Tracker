@@ -1633,13 +1633,71 @@ createApp({
         };
 
                 const brandCredits = computed(() => {
-            if (!activeBrand.value) return [];
-            return promoCredits.value.filter(c => 
-                (c.vendor || '').toLowerCase() === (activeBrand.value.vendor || '').toLowerCase()
-            ).sort((a, b) => calendarMonths.indexOf(b.trackingMonth) - calendarMonths.indexOf(a.month));
-        });
+                    if (!activeBrand.value) return [];
+                    let base = promoCredits.value.filter(c => 
+                        (c.vendor || '').toLowerCase() === (activeBrand.value.vendor || '').toLowerCase()
+                    );
 
-        const brandStats = computed(() => {
+                    // Apply Brand Portal Filters
+                    if (brandFilters.value.month !== 'All') {
+                        base = base.filter(c => c.trackingMonth === brandFilters.value.month);
+                    }
+                    if (brandFilters.value.site !== 'All') {
+                        base = base.filter(c => c.site === brandFilters.value.site);
+                    }
+                    if (brandFilters.value.status !== 'All') {
+                        base = base.filter(c => c.status === brandFilters.value.status);
+                    }
+                    if (brandFilters.value.search.trim() !== '') {
+                        const q = brandFilters.value.search.toLowerCase();
+                        base = base.filter(c => 
+                            (c.creditType || '').toLowerCase().includes(q) ||
+                            (c.dates || '').toLowerCase().includes(q) ||
+                            (c.invoice || '').toLowerCase().includes(q)
+                        );
+                    }
+
+                    return base.sort((a, b) => calendarMonths.indexOf(b.trackingMonth) - calendarMonths.indexOf(a.trackingMonth));
+                });
+
+                const brandFilters = ref({
+                    month: 'All',
+                    site: 'All',
+                    status: 'All',
+                    search: ''
+                });
+
+                const exportFilteredBrandData = () => {
+                    const data = brandCredits.value;
+                    if (data.length === 0) return alert("No data to export with current filters.");
+            
+                    const filename = `${activeBrand.value.vendor}_Export_${brandFilters.value.month}_${brandFilters.value.site}`;
+                    downloadAsCSV(data, filename);
+                    logSystemAction("EXPORT", `Brand ${activeBrand.value.vendor} exported filtered data (${data.length} rows)`);
+                };
+
+                const downloadAsCSV = (credits, filename) => {
+                    let csv = "Site,Month,Program,Dates,Amount,Status,Invoice/Memo\n";
+                    credits.forEach(c => {
+                        const safeSite = `"${String(c.site || '').replace(/"/g, '""')}"`;
+                        const safeMonth = `"${String(c.trackingMonth || '').replace(/"/g, '""')}"`;
+                        const safeType = `"${String(c.creditType || '').replace(/"/g, '""')}"`;
+                        const safeDates = `"${String(c.dates || '').replace(/"/g, '""')}"`;
+                        const safeInvoice = `"${String(c.invoice || '').replace(/"/g, '""')}"`;
+                        csv += `${safeSite},${safeMonth},${safeType},${safeDates},"${c.amount}","${c.status}",${safeInvoice}\n`;
+                    });
+
+                    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.setAttribute('href', url);
+                    a.setAttribute('download', `${filename.replace(/\s/g, '_')}.csv`);
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                };
+
+                const brandStats = computed(() => {
             const credits = brandCredits.value;
             return {
                 pending: credits.filter(c => c.status === 'Pending').reduce((s, c) => s + (parseFloat(c.amount) || 0), 0),
@@ -1680,7 +1738,8 @@ createApp({
             regenerateMonthReports, handleTreesCsvUpload, pushToMainTracker, resetBrandImport,
             processBrandRawPaste, processBrandImport, systemLogs, refreshIcons, clearAllSalesData,
             detectMonthInString, drawCharts, openDimeHelper, exportVendorsAndBrandsCSV, generateAccessCode,
-            brandCredits, brandStats, brandHistory, bulkGenerateCodes
+                        brandCredits, brandStats, brandHistory, bulkGenerateCodes,
+            brandFilters, exportFilteredBrandData
         };
     }
 }).mount('#app');
