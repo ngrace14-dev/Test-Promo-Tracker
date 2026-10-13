@@ -85,15 +85,23 @@
 
         <!-- BRAND PORTAL UI (Simplified Dashboard) -->
         <template v-if="isBrandUnlocked">
-            <header class="bg-gray-950 text-white px-5 py-4 flex justify-between items-center shrink-0 border-b border-gray-800">
+                        <header class="bg-gray-950 text-white px-5 py-4 flex justify-between items-center shrink-0 border-b border-gray-800">
                 <div class="flex items-center gap-3">
                     <div class="bg-amber-500 p-2 rounded-lg"><i data-lucide="layout-dashboard" class="w-5 h-5 text-gray-950"></i></div>
                     <div>
-                        <h1 class="font-bold text-lg leading-tight">{{ activeBrand.vendor }} Portal</h1>
+                        <h1 class="font-bold text-lg leading-tight">{{ activeBrand.vendor }} Portal <span v-if="isPreviewMode" class="text-xs bg-amber-500/20 text-amber-500 px-2 py-0.5 rounded ml-2 border border-amber-500/30">ADMIN PREVIEW</span></h1>
                         <p class="text-[10px] text-amber-500 font-bold uppercase tracking-widest">Self-Service Reporting</p>
                     </div>
                 </div>
-                <button @click="forceLock" class="bg-gray-800 hover:bg-gray-700 text-gray-300 px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2"><i data-lucide="log-out" class="w-4 h-4"></i> Logout</button>
+                <div class="flex items-center gap-4">
+                    <div v-if="isPreviewMode" class="flex items-center gap-2 mr-4 border-r border-gray-800 pr-4">
+                        <label class="text-[10px] font-bold text-gray-500 uppercase">Preview Brand:</label>
+                        <select v-model="activeBrand" class="bg-gray-800 border border-gray-700 text-xs font-bold p-1 rounded outline-none focus:ring-1 focus:ring-amber-500">
+                            <option v-for="b in masterBrands" :key="b.id" :value="b">{{ b.vendor }}</option>
+                        </select>
+                    </div>
+                    <button @click="forceLock" class="bg-gray-800 hover:bg-gray-700 text-gray-300 px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2"><i data-lucide="log-out" class="w-4 h-4"></i> Logout</button>
+                </div>
             </header>
 
             <div class="bg-gray-950 px-6 pt-2 flex gap-2 border-b border-gray-800">

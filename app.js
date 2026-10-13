@@ -36,11 +36,12 @@ const { createApp, ref, computed, nextTick, onMounted, watch } = window.Vue;
 
 createApp({
         setup() {
-        const selectedRole = ref(null); // 'Employee' or 'Brand'
-        const isManagerUnlocked = ref(false);
-        const isBrandUnlocked = ref(false);
-        const activeBrand = ref(null);
-        const brandTab = ref('Dashboard');
+            const selectedRole = ref(null); // 'Employee' or 'Brand'
+            const isManagerUnlocked = ref(false);
+            const isBrandUnlocked = ref(false);
+            const isPreviewMode = ref(false);
+            const activeBrand = ref(null);
+            const brandTab = ref('Dashboard');
         
         const loggedInUser = ref('');
         const emailInput = ref('');
@@ -919,22 +920,40 @@ createApp({
                 .catch((error) => { authError.value = "Invalid email or password."; });
         };
 
-        const handleBrandLogin = () => {
+                const handleBrandLogin = () => {
             brandAuthError.value = '';
             const email = brandEmailInput.value.trim().toLowerCase();
-            const code = brandCodeInput.value.trim();
+            const codeOrPass = brandCodeInput.value.trim();
 
-            if (!email || !code) {
-                brandAuthError.value = "Email and Code are required.";
+            if (!email || !codeOrPass) {
+                brandAuthError.value = "Email and Password/Code are required.";
                 return;
             }
 
+            // 1. Check if user is an Employee/Admin trying to access Brand Portal
+            if (systemUsers[email]) {
+                signInWithEmailAndPassword(auth, email, codeOrPass)
+                    .then(() => {
+                        isPreviewMode.value = true;
+                        isBrandUnlocked.value = true;
+                        if (masterBrands.value.length > 0) activeBrand.value = masterBrands.value[0];
+                        logSystemAction("LOGIN", `Admin viewing Brand Portal: ${email}`);
+                        refreshIcons();
+                    })
+                    .catch((err) => {
+                        brandAuthError.value = "Invalid Admin Password.";
+                    });
+                return;
+            }
+
+            // 2. Regular Brand Login
             const matched = masterBrands.value.find(b => 
                 b.email && b.email.toLowerCase().split(/[,;\s]+/).includes(email) &&
-                b.accessCode === code
+                b.accessCode === codeOrPass
             );
 
             if (matched) {
+                isPreviewMode.value = false;
                 activeBrand.value = matched;
                 isBrandUnlocked.value = true;
                 logSystemAction("LOGIN", `Brand Partner Login: ${matched.vendor}`);
@@ -944,10 +963,11 @@ createApp({
             }
         };
 
-        const forceLock = () => { 
+                const forceLock = () => { 
             signOut(auth).then(() => { 
                 isManagerUnlocked.value = false; 
                 isBrandUnlocked.value = false;
+                isPreviewMode.value = false;
                 selectedRole.value = null;
                 activeBrand.value = null;
                 loggedInUser.value = ''; 
@@ -1634,8 +1654,8 @@ createApp({
             return Object.values(groups).sort((a, b) => calendarMonths.indexOf(b.month) - calendarMonths.indexOf(a.month));
         });
 
-        return {
-            selectedRole, isManagerUnlocked, isBrandUnlocked, activeBrand, brandTab, 
+                return {
+            selectedRole, isManagerUnlocked, isBrandUnlocked, isPreviewMode, activeBrand, brandTab, 
             loggedInUser, emailInput, passwordInput, authError, 
             brandEmailInput, brandCodeInput, brandAuthError,
             activeSite, activeTab,
@@ -1653,7 +1673,7 @@ createApp({
             closeImportModal, resetImport, displayGrid, processRawPaste, processImport, regenerateBrandSummary,
             regenerateMonthReports, handleTreesCsvUpload, pushToMainTracker, resetBrandImport,
             processBrandRawPaste, processBrandImport, systemLogs, refreshIcons, clearAllSalesData,
-                        detectMonthInString, drawCharts, openDimeHelper, exportVendorsAndBrandsCSV, generateAccessCode,
+            detectMonthInString, drawCharts, openDimeHelper, exportVendorsAndBrandsCSV, generateAccessCode,
             brandCredits, brandStats, brandHistory, bulkGenerateCodes
         };
     }
