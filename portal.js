@@ -1,7 +1,8 @@
 // portal.js
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
-import { getFirestore, collection, onSnapshot, query, where, addDoc } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+import { getFirestore, collection, onSnapshot, query, where, addDoc, doc, getDocs } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+import { AUDIT_ACTIONS } from "./governance.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyAslKhO_Wn2l1paJkqWj5lhxX_2YSekynk",
@@ -50,8 +51,15 @@ createApp({
 
         const recentActivity = ref([]);
 
-        // SECURITY: Simple session persistence for demo purposes
+        const lockoutTime = 30 * 60 * 1000; // 30 minutes in ms
+
+        // SECURITY: Simple session persistence
         onMounted(() => {
+            const lockout = localStorage.getItem('brand_portal_lockout');
+            if (lockout && Date.now() < parseInt(lockout)) {
+                startLockout(parseInt(lockout) - Date.now());
+            }
+
             const session = sessionStorage.getItem('brand_portal_session');
             if (session) {
                 const data = JSON.parse(session);
@@ -68,65 +76,62 @@ createApp({
             isLoggingIn.value = true;
             loginError.value = '';
 
+            const email = loginEmail.value.trim().toLowerCase();
+            const code = loginCode.value.trim();
+
             try {
-                // Find brand with matching email and access code
-                // NOTE: In production, we'd use Firebase Auth Custom Tokens or a secure backend
-                // For this self-service MVP, we're using the Brands table as the source of truth
+                const brandsRef = collection(db, "brands");
+                const snapshot = await getDocs(brandsRef);
+                const brands = [];
+                snapshot.forEach(doc => brands.push({ id: doc.id, ...doc.data() }));
                 
-                const q = query(collection(db, "brands"), 
-                    where("email", "==", loginEmail.value.trim()),
-                    where("accessCode", "==", loginCode.value.trim())
+                const matched = brands.find(b => 
+                    b.email && b.email.toLowerCase().split(/[,;\s]+/).includes(email) &&
+                    b.accessCode === code
                 );
-                
-                // We'll simulate the query since we don't have indexes yet for this specific query
-                // Instead, we'll fetch brands and filter in memory for this demo
-                // (In prod, Nicholas would add the index in Firebase Console)
-                
-                onSnapshot(collection(db, "brands"), (snapshot) => {
-                    const brands = [];
-                    snapshot.forEach(doc => brands.push({ id: doc.id, ...doc.data() }));
+
+                if (matched) {
+                    currentBrand.value = matched;
+                    isAuthenticated.value = true;
+                    failedAttempts.value = 0;
+                    sessionStorage.setItem('brand_portal_session', JSON.stringify({
+                        brand: matched,
+                        email: email
+                    }));
+                    startDataSync();
+                    logAudit(AUDIT_ACTIONS.LOGIN_SUCCESS, `Brand ${matched.vendor} logged in`);
+                } else {
+                    failedAttempts.value++;
+                    loginError.value = `Invalid email or access code. (${5 - failedAttempts.value} attempts remaining)`;
+                    logAudit(AUDIT_ACTIONS.LOGIN_FAILURE, `Failed login attempt for ${email}`);
                     
-                    const matched = brands.find(b => 
-                        b.email && b.email.toLowerCase().split(/[,;\s]+/).includes(loginEmail.value.toLowerCase().trim()) &&
-                        b.accessCode === loginCode.value.trim()
-                    );
-
-                    if (matched) {
-                        currentBrand.value = matched;
-                        if (isDev.value) {
-                            allBrands.value = brands.sort((a, b) => (a.vendor || '').localeCompare(b.vendor || ''));
-                        }
-                        isAuthenticated.value = true;
-                        failedAttempts.value = 0;
-                        sessionStorage.setItem('brand_portal_session', JSON.stringify({
-                            brand: matched,
-                            email: loginEmail.value
-                        }));
-                        startDataSync();
-                        logAudit('Login', 'Successful login');
-                    } else {
-                        failedAttempts.value++;
-                        loginError.value = "Invalid email or access code.";
-                        if (failedAttempts.value >= 5) {
-                            startLockout();
-                        }
+                    if (failedAttempts.value >= 5) {
+                        const until = Date.now() + lockoutTime;
+                        localStorage.setItem('brand_portal_lockout', until.toString());
+                        startLockout(lockoutTime);
                     }
-                    isLoggingIn.value = false;
-                }, { once: true });
-
+                }
             } catch (error) {
                 console.error(error);
-                loginError.value = "System error during login. Please try again.";
+                loginError.value = "Authentication service unavailable.";
+            } finally {
                 isLoggingIn.value = false;
             }
         };
 
-        const startLockout = () => {
-            lockoutRemaining.value = 30;
+        const startLockout = (durationMs) => {
+            lockoutRemaining.value = Math.ceil(durationMs / 60000);
             const timer = setInterval(() => {
-                lockoutRemaining.value--;
-                if (lockoutRemaining.value <= 0) clearInterval(timer);
-            }, 60000);
+                const remaining = parseInt(localStorage.getItem('brand_portal_lockout')) - Date.now();
+                if (remaining <= 0) {
+                    clearInterval(timer);
+                    lockoutRemaining.value = 0;
+                    failedAttempts.value = 0;
+                    localStorage.removeItem('brand_portal_lockout');
+                } else {
+                    lockoutRemaining.value = Math.ceil(remaining / 60000);
+                }
+            }, 10000);
         };
 
         const handleLogout = () => {
