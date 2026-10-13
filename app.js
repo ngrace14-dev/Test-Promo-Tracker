@@ -101,16 +101,25 @@ createApp({
         };
 
                 const updateBrandField = async (brandId, fieldName, event) => {
-            const newValue = event.target.value;
-            try {
-                await updateDoc(doc(db, "brands", brandId), {
-                    [fieldName]: newValue
-                });
-            } catch (error) {
-                console.error("Error updating brand:", error);
-                alert("Failed to save changes to the cloud.");
-            }
-        };
+                    const newValue = event.target.value;
+                    try {
+                        await updateDoc(doc(db, "brands", brandId), {
+                            [fieldName]: newValue
+                        });
+                    } catch (error) {
+                        console.error("Error updating brand:", error);
+                        alert("Failed to save changes to the cloud.");
+                    }
+                };
+
+                const generateAccessCode = async (brandId) => {
+                    const code = Array.from({length: 4}, () => Math.random().toString(36).substring(2, 6).toUpperCase()).join('-');
+                    try {
+                        await updateDoc(doc(db, "brands", brandId), { accessCode: code });
+                    } catch (error) {
+                        console.error("Error generating code:", error);
+                    }
+                };
 
         const toggleBrandActive = async (brand) => {
             try {
@@ -539,11 +548,15 @@ createApp({
         });
 
         // EMAIL DRAFTER WITH DIME COLUMNS, REDDING SUNDIAL SUBJECT, RESTRICTED CC & VARIABLE FIX
-        const draftEmail = (report) => {
+                const draftEmail = (report) => {
             if (!report.email) {
                 alert(`No email mapped for ${report.vendor}. Please add one in the Brand Directory first.`);
                 return;
             }
+
+            const brandInfo = masterBrands.value.find(b => (b.vendor || '').toLowerCase() === (report.vendor || '').toLowerCase()) || {};
+            const accessCode = brandInfo.accessCode || 'CONTACT_ACCOUNTING';
+            const portalUrl = 'https://portal.rredco.com'; // Placeholder URL
 
             const storeName = activeSite.value === 'Redding' ? 'Sundial' : activeSite.value;
             const currentYear = new Date().getFullYear();
@@ -644,10 +657,17 @@ createApp({
             body += `Please see the attached itemized breakdown for vendor credits owed to ${storeName} for ${periodStr}.\n\n`;
             body += `The total amount for this period is ${formatCurrency(csvTotal)}.\n\n`;
             body += `Please review the attached CSV and let us know if you have any questions or when we can expect the credit to be applied to our account.\n\n`;
-            body += `Best regards,\n\n`;
+                        body += `Best regards,\n\n`;
             body += `${storeName} Accounting Team\n`;
             body += `Nicholas Grace (${senderEmail})\n`;
-            body += `(530)560-6624 - Office\n`;
+            body += `(530)560-6624 - Office\n\n`;
+            
+            body += `─────────────────\n`;
+            body += `Your Promo Portal Access\n`;
+            body += `Portal: ${portalUrl}\n`;
+            body += `Email: ${report.email}\n`;
+            body += `Access Code: ${accessCode}\n\n`;
+            body += `Access historical reports anytime through the portal.\n`;
 
             const encodedSubject = encodeURIComponent(subject);
             const encodedBody = encodeURIComponent(body);
@@ -781,8 +801,8 @@ createApp({
         const brandPasteData = ref('');
         const brandPastedGrid = ref([]);
         const brandMappedHeaders = ref([]);
-        const brandAvailableHeaders = ref([
-            '-- Ignore Column --', 'Brand', 'Rep', 'Email', 'Name as appears in TREES',
+                const brandAvailableHeaders = ref([
+            '-- Ignore Column --', 'Brand', 'Rep', 'Email', 'Access Code', 'Name as appears in TREES',
             'Distro', 'Asset Library', 'Order From', 'Payee', 'Notes'
         ]);
         
@@ -1359,7 +1379,7 @@ createApp({
             brandPasteData.value = '';
         };
 
-        const processBrandRawPaste = () => {
+                const processBrandRawPaste = () => {
             const text = brandPasteData.value;
             if (!text.trim()) return;
             const rows = text.split(/\r?\n/).filter(r => r.trim() !== '');
@@ -1373,6 +1393,7 @@ createApp({
                 if (cell.includes('brand') || cell.includes('vendor')) return 'Brand';
                 if (cell.includes('rep')) return 'Rep';
                 if (cell.includes('email')) return 'Email';
+                if (cell.includes('code')) return 'Access Code';
                 if (cell.includes('trees')) return 'Name as appears in TREES';
                 if (cell.includes('distro')) return 'Distro';
                 if (cell.includes('asset')) return 'Asset Library';
@@ -1413,9 +1434,10 @@ createApp({
                 
                 const existingBrand = masterBrands.value.find(b => (b.vendor || '').toLowerCase() === vendorName.toLowerCase());
                 
-                const payload = {};
+                                const payload = {};
                 if (currentBrand['Rep'] !== undefined) payload.rep = currentBrand['Rep'];
                 if (currentBrand['Email'] !== undefined) payload.email = currentBrand['Email'];
+                if (currentBrand['Access Code'] !== undefined) payload.accessCode = currentBrand['Access Code'];
                 if (currentBrand['Name as appears in TREES'] !== undefined) payload.treesName = currentBrand['Name as appears in TREES'];
                 if (currentBrand['Distro'] !== undefined) payload.distributor = currentBrand['Distro'];
                 if (currentBrand['Asset Library'] !== undefined) payload.assetLibrary = currentBrand['Asset Library'];
@@ -1527,8 +1549,8 @@ createApp({
             closePromoModal, handleFileUpload, saveCredit, editCredit, deleteCredit, openImportModal,
             closeImportModal, resetImport, displayGrid, processRawPaste, processImport, regenerateBrandSummary,
             regenerateMonthReports, handleTreesCsvUpload, pushToMainTracker, resetBrandImport,
-            processBrandRawPaste, processBrandImport, systemLogs, refreshIcons, clearAllSalesData,
-            detectMonthInString, drawCharts, openDimeHelper, exportVendorsAndBrandsCSV
+                        processBrandRawPaste, processBrandImport, systemLogs, refreshIcons, clearAllSalesData,
+            detectMonthInString, drawCharts, openDimeHelper, exportVendorsAndBrandsCSV, generateAccessCode
         };
     }
 }).mount('#app');

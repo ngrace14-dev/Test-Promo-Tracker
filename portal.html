@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brand Promo Portal - Secure Access</title>
+    
+    <!-- Dependencies -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Calibri:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        [v-cloak] { display: none; }
+        body { font-family: 'Calibri', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+    <div id="app" v-cloak class="min-h-screen flex flex-col">
+        
+        <!-- LOGIN SCREEN -->
+        <main v-if="!isAuthenticated" class="flex-1 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-2xl p-8 md:p-10 max-w-md w-full border border-gray-200">
+                <div class="bg-gray-950 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+                    <i data-lucide="shield-check" class="w-10 h-10 text-amber-500"></i>
+                </div>
+                <h2 class="text-2xl font-extrabold text-center text-gray-900 mb-2">Brand Promo Portal</h2>
+                <p class="text-gray-500 text-center mb-8 font-medium">Access your secure reports and analytics.</p>
+                
+                <div class="space-y-4 mb-6">
+                    <div>
+                        <label class="text-[11px] font-bold text-gray-500 uppercase tracking-widest ml-1">Email Address</label>
+                        <input type="email" v-model="loginEmail" class="w-full border-2 border-gray-200 p-3.5 rounded-xl focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 outline-none font-bold text-gray-900 transition-all mt-1" placeholder="reports@yourbrand.com">
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-bold text-gray-500 uppercase tracking-widest ml-1">Secure Access Code</label>
+                        <input type="password" v-model="loginCode" @keyup.enter="handleLogin" class="w-full border-2 border-gray-200 p-3.5 rounded-xl focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 outline-none font-mono text-center text-lg tracking-widest font-bold text-gray-900 transition-all mt-1" placeholder="XXXX-XXXX-XXXX">
+                    </div>
+                </div>
+                
+                <p v-if="loginError" class="text-red-500 text-sm font-bold mb-6 text-center bg-red-50 p-3 rounded-lg border border-red-100">{{ loginError }}</p>
+                
+                <button @click="handleLogin" :disabled="isLoggingIn || lockoutRemaining > 0" class="w-full py-4 bg-gray-950 hover:bg-gray-800 disabled:bg-gray-400 text-amber-500 rounded-xl font-bold text-lg shadow-lg transition-all flex items-center justify-center gap-2">
+                    <span v-if="lockoutRemaining > 0">Locked for {{ lockoutRemaining }}m</span>
+                    <span v-else-if="isLoggingIn">Verifying Access...</span>
+                    <span v-else>Login to Portal</span>
+                </button>
+
+                <p class="mt-8 text-center text-xs text-gray-400">
+                    Need an access code? Contact <a href="mailto:accounting@rredco.com" class="text-amber-600 font-bold hover:underline">accounting@rredco.com</a>
+                </p>
+            </div>
+        </main>
+
+        <!-- AUTHENTICATED PORTAL -->
+        <template v-else>
+            <!-- TOP NAV -->
+            <header class="bg-gray-950 text-white px-6 py-4 flex justify-between items-center shrink-0 shadow-xl border-b border-gray-800">
+                <div class="flex items-center gap-4">
+                    <div class="bg-amber-500 p-2 rounded-lg">
+                        <i data-lucide="layout-dashboard" class="w-6 h-6 text-gray-950"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg leading-tight">{{ currentBrand.vendor }} Portal</h1>
+                        <p class="text-[10px] text-amber-500 font-bold uppercase tracking-widest">Self-Service Reporting</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="hidden md:block text-right mr-4 border-r border-gray-800 pr-4">
+                        <p class="text-[10px] text-gray-500 uppercase font-bold">Authorized Account</p>
+                        <p class="text-sm font-bold">{{ loginEmail }}</p>
+                    </div>
+                    <button @click="handleLogout" class="bg-gray-800 hover:bg-gray-700 text-gray-300 px-4 py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-2 shadow-inner">
+                        <i data-lucide="log-out" class="w-4 h-4"></i> Sign Out
+                    </button>
+                </div>
+            </header>
+
+            <!-- SUB NAV / TABS -->
+            <nav class="bg-white border-b border-gray-200 px-6 flex gap-8">
+                <button @click="activeTab = 'Dashboard'" :class="activeTab === 'Dashboard' ? 'border-amber-500 text-amber-600' : 'border-transparent text-gray-500 hover:text-gray-700'" class="py-4 border-b-2 font-bold text-sm transition-all flex items-center gap-2">
+                    <i data-lucide="pie-chart" class="w-4 h-4"></i> Dashboard
+                </button>
+                <button @click="activeTab = 'Reports'" :class="activeTab === 'Reports' ? 'border-amber-500 text-amber-600' : 'border-transparent text-gray-500 hover:text-gray-700'" class="py-4 border-b-2 font-bold text-sm transition-all flex items-center gap-2">
+                    <i data-lucide="file-text" class="w-4 h-4"></i> Report Builder
+                </button>
+                <button @click="activeTab = 'History'" :class="activeTab === 'History' ? 'border-amber-500 text-amber-600' : 'border-transparent text-gray-500 hover:text-gray-700'" class="py-4 border-b-2 font-bold text-sm transition-all flex items-center gap-2">
+                    <i data-lucide="history" class="w-4 h-4"></i> Historical Reports
+                </button>
+                <button @click="activeTab = 'Support'" :class="activeTab === 'Support' ? 'border-amber-500 text-amber-600' : 'border-transparent text-gray-500 hover:text-gray-700'" class="py-4 border-b-2 font-bold text-sm transition-all flex items-center gap-2">
+                    <i data-lucide="help-circle" class="w-4 h-4"></i> Support
+                </button>
+            </nav>
+
+            <!-- MAIN CONTENT AREA -->
+            <main class="flex-1 overflow-y-auto p-6 bg-gray-50">
+                
+                <!-- DASHBOARD TAB -->
+                <div v-if="activeTab === 'Dashboard'" class="max-w-7xl mx-auto space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Open Programs</p>
+                            <p class="text-3xl font-extrabold text-gray-900">{{ dashboardStats.openPrograms }}</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Lifetime Promo Dollars</p>
+                            <p class="text-3xl font-extrabold text-emerald-600">{{ formatCurrency(dashboardStats.totalDollars) }}</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">YTD Credits Issued</p>
+                            <p class="text-3xl font-extrabold text-blue-600">{{ formatCurrency(dashboardStats.ytdDollars) }}</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Available Reports</p>
+                            <p class="text-3xl font-extrabold text-amber-500">{{ dashboardStats.availableReports }}</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 min-h-[350px]">
+                            <h3 class="font-bold text-gray-900 mb-6 flex items-center gap-2">
+                                <i data-lucide="bar-chart-3" class="w-5 h-5 text-amber-500"></i>
+                                Monthly Credit Performance
+                            </h3>
+                            <div class="h-64 relative">
+                                <canvas id="brandMonthlyChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+                            <h3 class="font-bold text-gray-900 mb-6 flex items-center gap-2">
+                                <i data-lucide="clock-3" class="w-5 h-5 text-amber-500"></i>
+                                Recent Activity
+                            </h3>
+                            <div class="space-y-4">
+                                <div v-for="log in recentActivity" :key="log.id" class="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-xl transition-colors border border-transparent hover:border-gray-100">
+                                    <div :class="log.type === 'download' ? 'bg-blue-100 text-blue-600' : 'bg-emerald-100 text-emerald-600'" class="w-10 h-10 rounded-full flex items-center justify-center shrink-0">
+                                        <i :data-lucide="log.type === 'download' ? 'download' : 'check-circle'" class="w-5 h-5"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <p class="text-sm font-bold text-gray-900">{{ log.message }}</p>
+                                        <p class="text-[10px] text-gray-400 font-medium">{{ formatDate(log.timestamp) }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- REPORT BUILDER TAB -->
+                <div v-if="activeTab === 'Reports'" class="max-w-4xl mx-auto">
+                    <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+                        <div class="p-6 border-b border-gray-100 bg-gray-50">
+                            <h2 class="text-xl font-extrabold text-gray-900">Custom Report Builder</h2>
+                            <p class="text-sm text-gray-500">Configure your filters below to generate a custom data export.</p>
+                        </div>
+                        
+                        <div class="p-8 space-y-8">
+                            <!-- Date Range -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="text-[11px] font-bold text-gray-500 uppercase tracking-widest ml-1">Start Month</label>
+                                    <select v-model="reportFilter.startMonth" class="w-full border-2 border-gray-100 p-3 rounded-xl focus:border-amber-500 outline-none font-bold mt-1">
+                                        <option v-for="m in calendarMonths" :key="m" :value="m">{{ m }}</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="text-[11px] font-bold text-gray-500 uppercase tracking-widest ml-1">End Month</label>
+                                    <select v-model="reportFilter.endMonth" class="w-full border-2 border-gray-100 p-3 rounded-xl focus:border-amber-500 outline-none font-bold mt-1">
+                                        <option v-for="m in calendarMonths" :key="m" :value="m">{{ m }}</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Promo Types -->
+                            <div>
+                                <label class="text-[11px] font-bold text-gray-500 uppercase tracking-widest ml-1 block mb-3">Include Programs</label>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <label v-for="type in availablePromoTypes" :key="type" class="flex items-center gap-3 p-3 border-2 border-gray-100 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors" :class="{'border-amber-500 bg-amber-50': reportFilter.types.includes(type)}">
+                                        <input type="checkbox" :value="type" v-model="reportFilter.types" class="w-5 h-5 text-amber-500 border-gray-300 rounded focus:ring-amber-500">
+                                        <span class="text-sm font-bold text-gray-700">{{ type }}</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Store Filter -->
+                            <div>
+                                <label class="text-[11px] font-bold text-gray-500 uppercase tracking-widest ml-1 block mb-1">Store Location</label>
+                                <select v-model="reportFilter.site" class="w-full border-2 border-gray-100 p-3 rounded-xl focus:border-amber-500 outline-none font-bold mt-1">
+                                    <option value="All">All Locations</option>
+                                    <option value="Red Bluff">Red Bluff</option>
+                                    <option value="Redding">Redding / Sundial</option>
+                                </select>
+                            </div>
+
+                            <!-- Output Format -->
+                            <div class="flex items-center gap-6 pt-4 border-t border-gray-100">
+                                <div class="flex-1">
+                                    <label class="text-[11px] font-bold text-gray-500 uppercase tracking-widest ml-1 block mb-3">Download Format</label>
+                                    <div class="flex gap-4">
+                                        <button @click="reportFilter.format = 'csv'" :class="reportFilter.format === 'csv' ? 'bg-amber-500 text-gray-950 shadow-md' : 'bg-gray-100 text-gray-500'" class="px-6 py-2 rounded-lg font-bold text-sm transition-all">CSV</button>
+                                        <button @click="reportFilter.format = 'pdf'" :class="reportFilter.format === 'pdf' ? 'bg-amber-500 text-gray-950 shadow-md' : 'bg-gray-100 text-gray-500'" class="px-6 py-2 rounded-lg font-bold text-sm transition-all">PDF Summary</button>
+                                    </div>
+                                </div>
+                                <button @click="generateCustomReport" class="px-10 py-4 bg-gray-950 hover:bg-gray-800 text-amber-500 rounded-xl font-bold shadow-xl transition-all flex items-center gap-3">
+                                    <i data-lucide="zap" class="w-5 h-5"></i>
+                                    Generate Report
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- HISTORY TAB -->
+                <div v-if="activeTab === 'History'" class="max-w-7xl mx-auto">
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-gray-50 border-b border-gray-200">
+                                    <th class="p-6 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Report Month</th>
+                                    <th class="p-6 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total Credit</th>
+                                    <th class="p-6 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Status</th>
+                                    <th class="p-6 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                <tr v-for="report in historicalReports" :key="report.month" class="hover:bg-gray-50 transition-colors">
+                                    <td class="p-6 font-bold text-gray-900">{{ report.month }}</td>
+                                    <td class="p-6 font-bold text-emerald-600">{{ formatCurrency(report.total) }}</td>
+                                    <td class="p-6">
+                                        <span :class="report.allApplied ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'" class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                                            {{ report.allApplied ? 'Resolved' : 'Pending Verification' }}
+                                        </span>
+                                    </td>
+                                    <td class="p-6 text-right">
+                                        <button @click="downloadHistorical(report)" class="text-amber-600 hover:text-amber-700 font-bold text-sm flex items-center gap-1 justify-end ml-auto">
+                                            <i data-lucide="download" class="w-4 h-4"></i> Download Archive
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr v-if="historicalReports.length === 0">
+                                    <td colspan="4" class="p-20 text-center text-gray-400 font-bold">No historical reports found.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- SUPPORT TAB -->
+                <div v-if="activeTab === 'Support'" class="max-w-4xl mx-auto">
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+                        <h2 class="text-2xl font-extrabold text-gray-900 mb-8">Portal Support Center</h2>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+                            <div class="space-y-4">
+                                <h3 class="font-bold text-gray-900 flex items-center gap-2">
+                                    <i data-lucide="message-square" class="w-5 h-5 text-amber-500"></i>
+                                    Contact Accounting
+                                </h3>
+                                <p class="text-sm text-gray-500">Questions about a specific credit or payment status?</p>
+                                <a href="mailto:accounting@rredco.com" class="inline-block bg-gray-50 hover:bg-gray-100 border border-gray-200 px-6 py-3 rounded-xl font-bold text-sm transition-colors">
+                                    Email Accounting Team
+                                </a>
+                            </div>
+                            <div class="space-y-4">
+                                <h3 class="font-bold text-gray-900 flex items-center gap-2">
+                                    <i data-lucide="life-buoy" class="w-5 h-5 text-amber-500"></i>
+                                    Technical Issues
+                                </h3>
+                                <p class="text-sm text-gray-500">Trouble logging in or generating reports?</p>
+                                <a href="mailto:nicholas.grace@rredco.com" class="inline-block bg-gray-50 hover:bg-gray-100 border border-gray-200 px-6 py-3 rounded-xl font-bold text-sm transition-colors">
+                                    Contact Portal Support
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="border-t border-gray-100 pt-8">
+                            <h3 class="font-bold text-gray-900 mb-6">Frequently Asked Questions</h3>
+                            <div class="space-y-6">
+                                <div>
+                                    <h4 class="font-bold text-sm text-gray-900 mb-1">When are monthly reports available?</h4>
+                                    <p class="text-sm text-gray-500">Reports for the previous month are typically finalized by the 10th of the following month.</p>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-sm text-gray-900 mb-1">How do I update my access code?</h4>
+                                    <p class="text-sm text-gray-500">Please email accounting@rredco.com to request a new secure access code.</p>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-sm text-gray-900 mb-1">Missing sales data in your report?</h4>
+                                    <p class="text-sm text-gray-500">Our reports are generated directly from Trees POS. If you believe there is a discrepancy, please provide your itemized records to our accounting team.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </template>
+    </div>
+
+    <!-- Firebase Scripts -->
+    <script type="module" src="portal.js?v=1"></script>
+</body>
+</html>

@@ -509,6 +509,7 @@
                                 </th>
                                 <th>Rep</th>
                                 <th>Email</th>
+                                <th>Access Code</th>
                                 <th>Name as appears in TREES</th>
                                 <th>Distro</th>
                                 <th>Asset Library</th>
@@ -531,6 +532,14 @@
                                 </td>
                                 <td><input type="text" :value="brand.rep" @change="updateBrandField(brand.id, 'rep', $event, brand.vendor)" placeholder="-" class="w-full min-w-[120px] bg-transparent border-b border-dashed border-transparent hover:border-gray-300 focus:border-emerald-500 outline-none px-1 py-0.5"></td>
                                 <td><input type="text" :value="brand.email" @change="updateBrandField(brand.id, 'email', $event, brand.vendor)" placeholder="-" class="w-full min-w-[180px] bg-transparent border-b border-dashed border-transparent hover:border-gray-300 focus:border-emerald-500 outline-none px-1 py-0.5 text-emerald-600 font-medium"></td>
+                                <td>
+                                    <div class="flex items-center gap-2">
+                                        <input type="text" :value="brand.accessCode" @change="updateBrandField(brand.id, 'accessCode', $event, brand.vendor)" placeholder="Generate Code..." class="w-full min-w-[140px] bg-transparent border-b border-dashed border-transparent hover:border-gray-300 focus:border-emerald-500 outline-none px-1 py-0.5 font-mono text-xs text-amber-600 font-bold">
+                                        <button @click="generateAccessCode(brand.id)" class="text-gray-400 hover:text-amber-500 transition-colors">
+                                            <i data-lucide="refresh-cw" class="w-3 h-3"></i>
+                                        </button>
+                                    </div>
+                                </td>
                                 <td><input type="text" :value="brand.treesName" @change="updateBrandField(brand.id, 'treesName', $event, brand.vendor)" placeholder="-" class="w-full min-w-[160px] bg-transparent border-b border-dashed border-transparent hover:border-gray-300 focus:border-emerald-500 outline-none px-1 py-0.5"></td>
                                 <td><input type="text" :value="brand.distributor" @change="updateBrandField(brand.id, 'distributor', $event, brand.vendor)" placeholder="-" class="w-full min-w-[140px] bg-transparent border-b border-dashed border-transparent hover:border-gray-300 focus:border-emerald-500 outline-none px-1 py-0.5"></td>
                                 <td><input type="text" :value="brand.assetLibrary" @change="updateBrandField(brand.id, 'assetLibrary', $event, brand.vendor)" placeholder="-" class="w-full min-w-[180px] bg-transparent border-b border-dashed border-transparent hover:border-gray-300 focus:border-emerald-500 outline-none px-1 py-0.5 text-xs text-amber-600"></td>

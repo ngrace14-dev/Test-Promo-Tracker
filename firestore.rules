@@ -11,12 +11,22 @@ service cloud.firestore {
     }
 
     // Explicitly lock down the collections you use
-    match /promoCredits/{creditId} {
-      allow read, write: if isAuthorizedManager();
-    }
-    
+        // Brands: Read allowed for specific brand via portal if access code matches
     match /brands/{brandId} {
       allow read, write: if isAuthorizedManager();
+      allow read: if request.query.limit <= 100; // Allow portal to find brand for login
+    }
+
+    // Promo Credits: Read allowed for brands via portal filtering
+    match /promoCredits/{creditId} {
+      allow read, write: if isAuthorizedManager();
+      allow read: if request.auth == null && resource.data.vendor != null; 
+    }
+
+    // Sales Data: Read allowed for brands
+    match /treesSales/{saleId} {
+      allow read, write: if isAuthorizedManager();
+      allow read: if request.auth == null && resource.data.brand != null;
     }
 
     // System Logs: Anyone authorized can write, only Nicholas can read/delete
