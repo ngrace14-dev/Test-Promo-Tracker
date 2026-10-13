@@ -2,7 +2,8 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
 import { getFirestore, collection, onSnapshot, query, where, addDoc, doc, getDocs } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
-import { AUDIT_ACTIONS } from "./governance.js";
+import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-storage.js";
+import { AUDIT_ACTIONS, PROMO_HIERARCHY } from "./governance.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyAslKhO_Wn2l1paJkqWj5lhxX_2YSekynk",
@@ -16,6 +17,7 @@ const firebaseConfig = {
 
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp);
+const storage = getStorage(firebaseApp);
 
 const { createApp, ref, computed, onMounted, watch, nextTick } = window.Vue;
 
@@ -35,7 +37,8 @@ createApp({
         const activeTab = ref('Dashboard');
         const currentBrand = ref(null);
         const promoCredits = ref([]);
-        const publishedReports = ref([]); // Sprint 4: Reports published by Admin
+        const publishedReports = ref([]); 
+        const creditRequests = ref([]);
         const allBrands = ref([]);
         const treesSalesData = ref([]);
 
@@ -49,6 +52,98 @@ createApp({
             site: 'All',
             format: 'csv'
         });
+
+        // SPRINT 5 & 6: Credit Request Intake & Documents
+        const showRequestModal = ref(false);
+        const isSubmitting = ref(false);
+        const promoGroups = Object.keys(PROMO_HIERARCHY);
+        const requestForm = ref({
+            reportId: '',
+            promoGroup: '',
+            promoType: '',
+            amount: 0,
+            notes: '',
+            site: 'Red Bluff',
+            attachment: null,
+            attachmentName: ''
+        });
+
+        const availablePromoTypesForGroup = computed(() => {
+            return PROMO_HIERARCHY[requestForm.value.promoGroup] || [];
+        });
+
+        const openRequestModal = (report = null) => {
+            requestForm.value = {
+                reportId: report ? report.id : '',
+                promoGroup: '',
+                promoType: '',
+                amount: report ? report.totalAmount : 0,
+                notes: '',
+                site: report ? report.site : 'Red Bluff',
+                attachment: null,
+                attachmentName: ''
+            };
+            showRequestModal.value = true;
+            refreshIcons();
+        };
+
+        const handleRequestFileUpload = (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (file.size > 5 * 1024 * 1024) {
+                alert("File too large. Max size is 5MB.");
+                event.target.value = '';
+                return;
+            }
+            requestForm.value.attachment = file;
+            requestForm.value.attachmentName = file.name;
+        };
+
+        const submitCreditRequest = async () => {
+            if (!requestForm.value.promoGroup || !requestForm.value.promoType || requestForm.value.amount <= 0) {
+                return alert("Please fill in all required fields.");
+            }
+
+            isSubmitting.value = true;
+            try {
+                let downloadUrl = "";
+                if (requestForm.value.attachment) {
+                    const fileRef = sRef(storage, `brand_uploads/${currentBrand.value.id}/${Date.now()}_${requestForm.value.attachmentName}`);
+                    const uploadResult = await uploadBytes(fileRef, requestForm.value.attachment);
+                    downloadUrl = await getDownloadURL(uploadResult.ref);
+                }
+
+                const requestId = `PC-${Date.now().toString().slice(-6)}`;
+                const payload = {
+                    reportId: requestForm.value.reportId,
+                    promoGroup: requestForm.value.promoGroup,
+                    promoType: requestForm.value.promoType,
+                    amount: requestForm.value.amount,
+                    notes: requestForm.value.notes,
+                    site: requestForm.value.site,
+                    proofUrl: downloadUrl,
+                    proofName: requestForm.value.attachmentName,
+                    requestId,
+                    brandId: currentBrand.value.id,
+                    vendorName: currentBrand.value.vendor,
+                    statusId: 'SUBMITTED',
+                    createdAt: Date.now(),
+                    updatedAt: Date.now()
+                };
+
+                await addDoc(collection(db, "creditRequests"), payload);
+                
+                await logAudit(AUDIT_ACTIONS.STATUS_CHANGE, `Submitted request ${requestId} with proof`);
+                
+                alert("Credit request submitted successfully!");
+                showRequestModal.value = false;
+            } catch (error) {
+                console.error("Submission Error:", error);
+                alert("Failed to submit request.");
+            } finally {
+                isSubmitting.value = false;
+            }
+        };
 
         const recentActivity = ref([]);
 
@@ -172,6 +267,17 @@ createApp({
                 const reports = [];
                 snapshot.forEach(doc => reports.push({ id: doc.id, ...doc.data() }));
                 publishedReports.value = reports.sort((a, b) => b.publishedAt - a.publishedAt);
+            });
+
+            // SPRINT 5: Fetch credit requests
+            const requestsQuery = query(collection(db, "creditRequests"), 
+                where("brandId", "==", currentBrand.value.id)
+            );
+
+            onSnapshot(requestsQuery, (snapshot) => {
+                const reqs = [];
+                snapshot.forEach(doc => reqs.push({ id: doc.id, ...doc.data() }));
+                creditRequests.value = reqs.sort((a, b) => b.createdAt - a.createdAt);
             });
 
             // Fetch raw sales for this brand to allow self-service CSV generation
@@ -375,7 +481,10 @@ createApp({
             availablePromoTypes, dashboardStats, recentActivity, calendarMonths,
             handleLogin, handleLogout, generateCustomReport, downloadHistorical,
             formatCurrency, formatDate, refreshIcons, isDev, allBrands, selectBrand,
-            showBrandSelector, reportStep, isDataFetched, unlockReportFilters
+            showBrandSelector, reportStep, isDataFetched, unlockReportFilters,
+            publishedReports, creditRequests, showRequestModal, isSubmitting,
+            promoGroups, requestForm, availablePromoTypesForGroup, openRequestModal, submitCreditRequest,
+            handleRequestFileUpload
         };
     }
 }).mount('#app');
