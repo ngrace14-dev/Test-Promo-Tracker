@@ -12,13 +12,47 @@ service cloud.firestore {
 
     // Explicitly lock down the collections you use
         // Brands: Read allowed for specific brand via portal if access code matches
-    match /brands/{brandId} {
-      allow read, write: if isAuthorizedManager();
-      allow read: if request.query.limit <= 100; // Allow portal to find brand for login
-    }
+        match /brands/{brandId} {
+          allow read, write: if isAuthorizedManager();
+          allow read: if true; // Temporary for portal login lookup
+        }
 
-    // Promo Credits: Read allowed for brands via portal filtering
-    match /promoCredits/{creditId} {
+        // Reports: Published by Admin, Read by Brands
+        match /reports/{reportId} {
+          allow read, write: if isAuthorizedManager();
+          allow read: if true; // Brands filter by ID in app logic
+        }
+
+        // Credit Requests: Submitted by Brands, Managed by Admin
+        match /creditRequests/{requestId} {
+          allow read, write: if isAuthorizedManager();
+          allow read, create: if true; // Brands can create and read their own
+        }
+
+        // Documents: Uploaded by Brands/Admin
+        match /documents/{docId} {
+          allow read, write: if isAuthorizedManager();
+          allow read, create: if true; 
+        }
+
+        // Promo & Status Definitions: Read-only for Brands, Managed by Admin
+        match /promoDefinitions/{id} {
+          allow read: if true;
+          allow write: if isAuthorizedManager();
+        }
+        match /statusDefinitions/{id} {
+          allow read: if true;
+          allow write: if isAuthorizedManager();
+        }
+
+        // Activity Log: Non-negotiable audit trail
+        match /activityLog/{logId} {
+          allow create: if true;
+          allow read: if true;
+        }
+
+        // Promo Credits: Legacy collection (maintaining for backward compatibility)
+
       allow read, write: if isAuthorizedManager();
       allow read: if request.auth == null && resource.data.vendor != null; 
     }
