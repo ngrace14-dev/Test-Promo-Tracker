@@ -43,6 +43,9 @@ export const NAMING_CONVENTIONS = {
 };
 
 export const AUDIT_ACTIONS = {
+    VENDOR_MAPPED: "Vendor Mapped",
+    BRAND_LINKED: "Brand Linked",
+    MAPPING_QUEUE_UPDATED: "Mapping Queue Updated",
     STATUS_CHANGE: "Status Changed",
     DOCUMENT_UPLOAD: "Document Uploaded",
     REPORT_PUBLISHED: "Report Published",
