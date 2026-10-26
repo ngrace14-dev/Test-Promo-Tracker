@@ -28,13 +28,14 @@ const firebaseConfig = {
 
 const firebaseApp = initializeApp(firebaseConfig);
 
+// SAFETY WRAP FOR APP CHECK
 try {
     initializeAppCheck(firebaseApp, {
         provider: new ReCaptchaEnterpriseProvider("6LeNEb8tAAAAAN454U2BgfO-ot6wN8T3VexIgIMq"),
         isTokenAutoRefreshEnabled: true
     });
 } catch (error) {
-    console.error("App Check Error:", error);
+    console.warn("App Check failed to initialize. Continuing in reduced-security mode:", error);
 }
 
 const db = getFirestore(firebaseApp);
@@ -47,6 +48,32 @@ const { createApp, ref, computed, nextTick, onMounted, watch } = window.Vue;
 
 createApp({
     setup() {
+        // --- 1. CORE UTILITIES (Hoisted for reference safety) ---
+        const loggedInUser = ref('');
+
+        const logSystemAction = async (actionType, details) => {
+            try {
+                await addDoc(collection(db, "systemLogs"), {
+                    timestamp: Date.now(),
+                    user: loggedInUser.value || 'System',
+                    actionType: actionType,
+                    details: details
+                });
+            } catch (error) {
+                console.error("Error logging action:", error);
+            }
+        };
+
+        const formatCurrency = (val) => {
+            const num = parseFloat(val);
+            if (isNaN(num)) return '$0.00';
+            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
+        };
+
+        // --- 2. SERVICES ---
+        const identityService = new IdentityService(db, logSystemAction);
+        const hydrationService = new HydrationService(db, identityService, logSystemAction);
+
         // --- 1. CORE UTILITIES (Hoisted for initialization safety) ---
         const loggedInUser = ref('');
 
