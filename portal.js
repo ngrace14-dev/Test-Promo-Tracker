@@ -8,6 +8,10 @@ import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "https://www.gst
 import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-storage.js";
 import { PROMO_HIERARCHY, STATUS_DEFINITIONS, AUDIT_ACTIONS } from "./governance.js";
 
+import { IdentityService } from "./services/IdentityService.js";
+import { HydrationService } from "./services/HydrationService.js";
+
+
 
 // 2. FIREBASE CONFIGURATION
 const firebaseConfig = {
@@ -43,10 +47,90 @@ createApp({
         setup() {
             const selectedRole = ref(null); // 'Employee' or 'Brand'
             const isManagerUnlocked = ref(false);
-            const isBrandUnlocked = ref(false);
+                        const isBrandUnlocked = ref(false);
             const isPreviewMode = ref(false);
             const activeBrand = ref(null);
             const brandTab = ref('Dashboard');
+
+            // PHASE 3: IDENTITY MAPPING STATE
+            const identityService = new IdentityService(db, logSystemAction);
+            const hydrationService = new HydrationService(db, identityService, logSystemAction);
+            
+            const mappingQueue = ref([]);
+            const selectedQueueItem = ref(null);
+            const vendorMappings = ref([]);
+            const siteMappings = ref([]);
+            const vendorSearch = ref('');
+            const selectedVendorForLink = ref(null);
+            const showVendorModal = ref(false);
+            const vendorForm = ref({ canonicalName: '', sageVendorCode: '', outreachEmail: '' });
+
+            const mappingQueueCount = computed(() => mappingQueue.value.length);
+            const filteredVendors = computed(() => {
+                const q = vendorSearch.value.toLowerCase();
+                return vendorMappings.value.filter(v => v.canonicalName.toLowerCase().includes(q) || (v.sageVendorCode || '').toLowerCase().includes(q));
+            });
+
+            const resolveMapping = async () => {
+                if (!selectedQueueItem.value || !selectedVendorForLink.value) return;
+                
+                try {
+                    const batch = writeBatch(db);
+                    
+                    // 1. Create brandMapping
+                    const brandRef = doc(collection(db, "brandMappings"));
+                    batch.set(brandRef, {
+                        brandName: selectedQueueItem.value.rawValue,
+                        vendorId: selectedVendorForLink.value.id,
+                        confidence: 'HIGH',
+                        mappedAt: Date.now(),
+                        mappedBy: loggedInUser.value
+                    });
+
+                    // 2. Mark queue item as RESOLVED
+                    const queueRef = doc(db, "mappingQueue", selectedQueueItem.value.id);
+                    batch.update(queueRef, { status: 'RESOLVED', resolvedAt: Date.now() });
+
+                    await batch.commit();
+                    
+                    await logSystemAction(AUDIT_ACTIONS.BRAND_LINKED, `Linked "${selectedQueueItem.value.rawValue}" to ${selectedVendorForLink.value.canonicalName}`);
+                    
+                    selectedQueueItem.value = null;
+                    selectedVendorForLink.value = null;
+                    alert("Identity mapping resolved successfully!");
+                } catch (error) {
+                    console.error("Resolution Error:", error);
+                    alert("Failed to resolve mapping.");
+                }
+            };
+
+            const saveCanonicalVendor = async () => {
+                if (!vendorForm.value.canonicalName) return alert("Vendor Name is required.");
+                try {
+                    const docRef = await addDoc(collection(db, "vendorMappings"), {
+                        ...vendorForm.value,
+                        createdAt: Date.now(),
+                        status: 'ACTIVE'
+                    });
+                    await logSystemAction(AUDIT_ACTIONS.VENDOR_MAPPED, `Created canonical vendor: ${vendorForm.value.canonicalName}`);
+                    vendorForm.value = { canonicalName: '', sageVendorCode: '', outreachEmail: '' };
+                    showVendorModal.value = false;
+                } catch (error) {
+                    alert("Failed to create vendor.");
+                }
+            };
+
+            const runHydrationDryRun = async () => {
+                if (!confirm("Run a legacy hydration dry-run? This will scan your credits and report on mapping status without changing data.")) return;
+                try {
+                    const report = await hydrationService.hydrateLegacyCredits(true);
+                    console.log("Hydration Dry Run Report:", report);
+                    alert(`Dry Run Complete!\nProcessed: ${report.totalProcessed}\nResolved: ${report.successfullyHydrated}\nNeeds Mapping: ${report.needsMapping}`);
+                } catch (error) {
+                    alert("Hydration check failed.");
+                }
+            };
+
 
 
 
@@ -945,11 +1029,31 @@ createApp({
                     });
 
                     // Sprint 7: Listen for incoming credit requests from brands
-                    onSnapshot(collection(db, "creditRequests"), (snapshot) => {
+                                        onSnapshot(collection(db, "creditRequests"), (snapshot) => {
                         const reqs = [];
-                        snapshot.forEach(docSnap => reqs.push({ id: docSnap.id, ...docSnap.data() }));
+                        snapshot.forEach(docSnap => { reqs.push({ id: docSnap.id, ...docSnap.data() }); });
                         creditRequests.value = reqs.sort((a, b) => b.createdAt - a.createdAt);
                     });
+
+                    // PHASE 3: IDENTITY SNAPSHOTS
+                    onSnapshot(query(collection(db, "mappingQueue"), where("status", "==", "PENDING")), (snapshot) => {
+                        const items = [];
+                        snapshot.forEach(docSnap => items.push({ id: docSnap.id, ...docSnap.data() }));
+                        mappingQueue.value = items;
+                    });
+
+                    onSnapshot(collection(db, "vendorMappings"), (snapshot) => {
+                        const items = [];
+                        snapshot.forEach(docSnap => items.push({ id: docSnap.id, ...docSnap.data() }));
+                        vendorMappings.value = items.sort((a, b) => a.canonicalName.localeCompare(b.canonicalName));
+                    });
+
+                    onSnapshot(collection(db, "siteMappings"), (snapshot) => {
+                        const items = [];
+                        snapshot.forEach(docSnap => items.push({ id: docSnap.id, ...docSnap.data() }));
+                        siteMappings.value = items;
+                    });
+
 
 
                 }
@@ -1951,7 +2055,12 @@ createApp({
 
 
                                                 creditRequests, updateRequestStatus, reconcileRequest, getStatusDisplayName, getStatusColor,
-                        STATUS_DEFINITIONS, isLogsMinimized
+                        STATUS_DEFINITIONS, isLogsMinimized,
+
+                        // PHASE 3 EXPORTS
+                        mappingQueue, selectedQueueItem, vendorMappings, siteMappings, vendorSearch, 
+                        selectedVendorForLink, showVendorModal, vendorForm, mappingQueueCount, 
+                        filteredVendors, resolveMapping, saveCanonicalVendor, runHydrationDryRun
         };
 
 
