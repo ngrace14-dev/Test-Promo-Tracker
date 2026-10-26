@@ -1070,7 +1070,8 @@ createApp({
             });
         });
 
-                        const currentView = ref('DASHBOARD');
+                                const currentView = ref('DASHBOARD');
+        const legacyMode = ref(false);
         const activeYear = ref(2026);
         const sidebarExpanded = ref({
             DISCOVERY: true,
@@ -1079,6 +1080,13 @@ createApp({
             VALIDATION: false,
             IDENTITY: false,
             ARCHIVE: false
+        });
+
+        // FORCE RENDER PRIORITY (STAGE 1)
+        onMounted(() => {
+            currentView.value = 'DASHBOARD';
+            legacyMode.value = false;
+            refreshIcons();
         });
 
         const toggleGroup = (group) => {
@@ -1128,6 +1136,8 @@ createApp({
 
         const getWorkbookMapping = (view) => {
             const mappings = {
+                'DASHBOARD': 'YTD Dashboard',
+                'IMPORT_CENTER': 'Discovery Data / Recovery Tracking',
                 'DISCOVERY': 'Monthly Discovery Data',
                 'RECOVERY': 'Recovery Tracking',
                 'LEDGER': 'YTD Running Totals',
@@ -1141,6 +1151,8 @@ createApp({
 
         const getServiceMapping = (view) => {
             const mappings = {
+                'DASHBOARD': 'AnalyticsEngine',
+                'IMPORT_CENTER': 'WorkbookSyncService',
                 'DISCOVERY': 'DiscoveryAggregationEngine',
                 'RECOVERY': 'WorkbookSyncService',
                 'LEDGER': 'LedgerService (Future)',
@@ -1153,6 +1165,7 @@ createApp({
         };
 
         const handleLogin = () => {
+
 
                 // RECOVERY LOG STATE (PHASE 6E)
         const recoveryStats = computed(() => ({
