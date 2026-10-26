@@ -1722,8 +1722,7 @@ createApp({
             }
         };
 
-        const isSuperAdmin = ref(false);
-        const systemLogs = ref([]);
+                const systemLogs = ref([]);
 
         const refreshIcons = () => {
             nextTick(() => {
