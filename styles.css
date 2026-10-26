@@ -1,6 +1,7 @@
 /* styles.css */
 /* Mobile viewport height fix */
-body { font-family: 'Calibri', sans-serif; background-color: #f3f4f6; margin: 0; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+body { font-family: 'Calibri', 'Segoe UI', Candara, 'Bitstream Vera Sans', 'DejaVu Sans', 'Bitstream Vera Sans', 'Trebuchet MS', Verdana, 'Verdana Ref', sans-serif; background-color: #f3f4f6; margin: 0; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+
 
 .excel-table { border-collapse: separate; border-spacing: 0; font-size: 13px; background-color: white; width: 100%; text-align: left; }
 .excel-table th, .excel-table td { border-bottom: 1px solid #d1d5db; border-right: 1px solid #d1d5db; padding: 8px 12px; white-space: nowrap; }
