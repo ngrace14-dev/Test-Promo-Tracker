@@ -1,0 +1,15 @@
+{
+  "project": "PCRP",
+  "version": "1.0.0",
+  "roadmap": {
+    "P1": "COMPLETE - Documentation in docs/phase1_*.md",
+    "P2": "COMPLETE - Documentation in docs/phase2_domain_model.md",
+    "P3": "PENDING - Vendor Mapping Engine",
+    "P4": "PENDING - Treez Pipeline",
+    "P5": "PENDING - Sage Pipeline",
+    "P6": "PENDING - Reconciliation Engine",
+    "P7": "PENDING - Reporting Engine",
+    "P8": "PENDING - Workbook Generator",
+    "P9": "PENDING - Outreach Center"
+  }
+}
