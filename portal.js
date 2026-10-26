@@ -10,6 +10,8 @@ import { PROMO_HIERARCHY, STATUS_DEFINITIONS, AUDIT_ACTIONS } from "./governance
 
 import { IdentityService } from "./services/IdentityService.js";
 import { HydrationService } from "./services/HydrationService.js";
+import { QueueService, QUEUE_ACTION_TYPES } from "./services/QueueService.js";
+
 
 
 
@@ -71,6 +73,34 @@ createApp({
         // --- 2. SERVICES ---
         const identityService = new IdentityService(db, logSystemAction);
         const hydrationService = new HydrationService(db, identityService, logSystemAction);
+
+        // --- 1. CORE UTILITIES (Hoisted for initialization safety) ---
+        const loggedInUser = ref('');
+
+        const logSystemAction = async (actionType, details) => {
+            try {
+                await addDoc(collection(db, "systemLogs"), {
+                    timestamp: Date.now(),
+                    user: loggedInUser.value || 'System',
+                    actionType: actionType,
+                    details: details
+                });
+            } catch (error) {
+                console.error("Error logging action:", error);
+            }
+        };
+
+        const formatCurrency = (val) => {
+            const num = parseFloat(val);
+            if (isNaN(num)) return '$0.00';
+            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
+        };
+
+                // --- 2. SERVICES ---
+        const identityService = new IdentityService(db, logSystemAction);
+        const hydrationService = new HydrationService(db, identityService, logSystemAction);
+        const queueService = new QueueService(db, logSystemAction);
+
 
         // --- 3. REACTIVE STATE ---
         const selectedRole = ref(null); // 'Employee' or 'Brand'
@@ -184,6 +214,8 @@ createApp({
             'nicholas.grace@rredco.com': { name: 'Nicholas G.', access: ['Red Bluff', 'Redding'], active: true, superAdmin: true },
             'accounting@rredco.com': { name: 'Accounting Team', access: ['Red Bluff', 'Redding'], active: true, superAdmin: true }
         };
+
+        const isSuperAdmin = ref(false);
 
         const treesSalesData = ref(JSON.parse(localStorage.getItem('treesSalesData')) || []);
         
