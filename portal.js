@@ -1070,59 +1070,89 @@ createApp({
             });
         });
 
-                const currentView = ref('DASHBOARD');
-                const activeYear = ref(2026);
+                        const currentView = ref('DASHBOARD');
+        const activeYear = ref(2026);
+        const sidebarExpanded = ref({
+            DISCOVERY: true,
+            RECOVERY: false,
+            LEDGER: false,
+            VALIDATION: false,
+            IDENTITY: false,
+            ARCHIVE: false
+        });
 
-                // DISCOVERY ENGINE STATE (PHASE 6D)
-                const discoveryHealth = computed(() => ({
-                    lastSuccess: 'Oct 26, 2026',
-                    lastFailed: 'None',
-                    unmappedVendors: mappingQueue.value.length,
-                    workbookVariance: formatCurrency(125.40),
-                    claimCount: promoCredits.value.length,
-                    totalDiscovery: formatCurrency(promoCredits.value.reduce((s,c) => s + (parseFloat(c.amount)||0), 0))
-                }));
+        const toggleGroup = (group) => {
+            sidebarExpanded.value[group] = !sidebarExpanded.value[group];
+        };
 
-                const importBatches = ref([
-                    { id: 'BATCH-101', filename: 'August_2026_Treez.csv', date: '2026-08-05', records: 4502, status: 'Workbook Match', type: 'Discovery' },
-                    { id: 'BATCH-102', filename: 'Sept_2026_Treez.csv', date: '2026-09-04', records: 3890, status: 'Validated', type: 'Discovery' },
-                    { id: 'BATCH-103', filename: 'Sage_Export_Oct.csv', date: '2026-10-10', records: 120, status: 'Processing', type: 'Recovery' }
-                ]);
+        const activeSite = ref('Combined');
 
-                const executiveKPIs = computed(() => [
-                    { label: 'Discovery YTD', value: formatCurrency(2450800), color: 'text-gray-900' },
-                    { label: 'Recovery YTD', value: formatCurrency(2105400), color: 'text-emerald-600' },
-                    { label: 'Outstanding', value: formatCurrency(345400), color: 'text-amber-500' },
-                    { label: 'Recovery %', value: '85.9%', color: 'text-emerald-500', subtext: 'Target: 95%' },
-                    { label: 'Workbook Parity', value: '99.9%', color: 'text-blue-500', subtext: 'WB: $2.45M / PCRP: $2.45M' },
-                    { label: 'Variance', value: formatCurrency(125.40), color: 'text-red-500', subtext: 'Investigation Required' }
-                ]);
+        // MOCK DATA FOR SHELLS
+        const mockAging = [
+            { vendor: 'Kiva Confections', store: 'Redding', generated: 45000, recovered: 42000, outstanding: 3000, '0-30': 1500, '31-60': 1000, '61-90': 500, '91-120': 0, '120+': 0, status: 'OPEN' },
+            { vendor: 'Wyld', store: 'Red Bluff', generated: 32000, recovered: 32000, outstanding: 0, '0-30': 0, '31-60': 0, '61-90': 0, '91-120': 0, '120+': 0, status: 'LOCKED' },
+            { vendor: 'Jeeter', store: 'Redding', generated: 15000, recovered: 5000, outstanding: 10000, '0-30': 2000, '31-60': 3000, '61-90': 5000, '91-120': 0, '120+': 0, status: 'OPEN' }
+        ];
 
-                const getWorkbookMapping = (view) => {
-                    const mappings = {
-                        'DISCOVERY': 'Monthly Discovery Data',
-                        'RECOVERY': 'Recovery Tracking',
-                        'LEDGER': 'YTD Running Totals',
-                        'VALIDATION': 'Board Recon (Redding/RB)',
-                        'IDENTITY': 'Brand Mapping',
-                        'ARCHIVE': 'Annual Archive',
-                        'LOGS': 'Internal System Audit'
-                    };
-                    return mappings[view] || 'TBD';
-                };
+        const calibrationStats = {
+            workbook: 2450800,
+            pcrp: 2450674.60,
+            variance: 125.40,
+            parity: '99.9%'
+        };
 
-                const getServiceMapping = (view) => {
-                    const mappings = {
-                        'DISCOVERY': 'DiscoveryAggregationEngine',
-                        'RECOVERY': 'WorkbookSyncService',
-                        'LEDGER': 'LedgerService (Future)',
-                        'VALIDATION': 'ValidationEngine (Future)',
-                        'IDENTITY': 'IdentityService',
-                        'ARCHIVE': 'AnnualArchiveService',
-                        'LOGS': 'AuditLogger'
-                    };
-                    return mappings[view] || 'TBD';
-                };
+        // DISCOVERY ENGINE STATE (PHASE 6D)
+        const discoveryHealth = computed(() => ({
+            lastSuccess: 'Oct 26, 2026',
+            lastFailed: 'None',
+            unmappedVendors: mappingQueue.value.length,
+            workbookVariance: formatCurrency(125.40),
+            claimCount: promoCredits.value.length,
+            totalDiscovery: formatCurrency(promoCredits.value.reduce((s,c) => s + (parseFloat(c.amount)||0), 0))
+        }));
+
+        const importBatches = ref([
+            { id: 'BATCH-101', filename: 'August_2026_Treez.csv', date: '2026-08-05', records: 4502, status: 'Workbook Match', type: 'Discovery' },
+            { id: 'BATCH-102', filename: 'Sept_2026_Treez.csv', date: '2026-09-04', records: 3890, status: 'Validated', type: 'Discovery' },
+            { id: 'BATCH-103', filename: 'Sage_Export_Oct.csv', date: '2026-10-10', records: 120, status: 'Processing', type: 'Recovery' }
+        ]);
+
+        const executiveKPIs = computed(() => [
+            { label: 'Discovery YTD', value: formatCurrency(2450800), color: 'text-gray-900' },
+            { label: 'Recovery YTD', value: formatCurrency(2105400), color: 'text-emerald-600' },
+            { label: 'Outstanding', value: formatCurrency(345400), color: 'text-amber-500' },
+            { label: 'Recovery %', value: '85.9%', color: 'text-emerald-500', subtext: 'Target: 95%' },
+            { label: 'Workbook Parity', value: '99.9%', color: 'text-blue-500', subtext: 'WB: $2.45M / PCRP: $2.45M' },
+            { label: 'Variance', value: formatCurrency(125.40), color: 'text-red-500', subtext: 'Investigation Required' }
+        ]);
+
+        const getWorkbookMapping = (view) => {
+            const mappings = {
+                'DISCOVERY': 'Monthly Discovery Data',
+                'RECOVERY': 'Recovery Tracking',
+                'LEDGER': 'YTD Running Totals',
+                'VALIDATION': 'Board Recon (Redding/RB)',
+                'IDENTITY': 'Brand Mapping',
+                'ARCHIVE': 'Annual Archive',
+                'LOGS': 'Internal System Audit'
+            };
+            return mappings[view] || 'TBD';
+        };
+
+        const getServiceMapping = (view) => {
+            const mappings = {
+                'DISCOVERY': 'DiscoveryAggregationEngine',
+                'RECOVERY': 'WorkbookSyncService',
+                'LEDGER': 'LedgerService (Future)',
+                'VALIDATION': 'ValidationEngine (Future)',
+                'IDENTITY': 'IdentityService',
+                'ARCHIVE': 'AnnualArchiveService',
+                'LOGS': 'AuditLogger'
+            };
+            return mappings[view] || 'TBD';
+        };
+
+        const handleLogin = () => {
 
                 // RECOVERY LOG STATE (PHASE 6E)
         const recoveryStats = computed(() => ({
@@ -2118,9 +2148,12 @@ createApp({
             regenerateMonthReports, handleTreesCsvUpload, pushToMainTracker, resetBrandImport,
             processBrandRawPaste, processBrandImport, systemLogs, refreshIcons, clearAllSalesData,
                         detectMonthInString, drawCharts, openDimeHelper, exportVendorsAndBrandsCSV, generateAccessCode,
-                                    brandCredits, brandStats, brandHistory,                                                                         bulkGenerateCodes,
+                                    brandCredits, brandStats, brandHistory,                                                                                                             bulkGenerateCodes,
                                     importBatches, discoveryHealth,
                                     sageRecoveries, recoveryStats,
+                                    currentView, sidebarExpanded, toggleGroup,
+                                    activeYear, activeMonth, activeSite,
+                                    mockAging, calibrationStats,
                                     brandFilters, exportFilteredBrandData,
                                                 builder, builderOptions, builderPreviewData, runBuilderExport,
                         publishReport, isReportPublished, isPublishing, pushMonthToBrands,

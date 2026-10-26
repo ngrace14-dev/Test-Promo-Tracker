@@ -464,6 +464,8 @@
                         </div>
                     </div>
 
+                                            <!-- PLACEHOLDER FOR OTHER VIEWS -->
+                    <div v-if="['LEDGER', 'VALIDATION', 'IDENTITY', 'ARCHIVE', 'LOGS'].includes(currentView)" class="flex-1 flex flex-col items-center justify-center bg-gray-50 text-center p-20">
                         <div class="bg-white p-12 rounded-[3rem] shadow-xl border border-gray-200 max-w-md w-full">
                             <div class="bg-gray-950 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl">
                                 <i data-lucide="construction" class="w-10 h-10 text-amber-500"></i>
@@ -477,6 +479,7 @@
                             <p class="text-sm text-gray-400 italic">This view is currently in shell mode. Business logic and data grids are pending Phase 6C/D authorization.</p>
                         </div>
                     </div>
+
 
                 </main>
             </div>
