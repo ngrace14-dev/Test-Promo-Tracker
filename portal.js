@@ -63,13 +63,13 @@ createApp({
             }
         };
 
-        const formatCurrency = (val) => {
+                const formatCurrency = (val) => {
             const num = parseFloat(val);
             if (isNaN(num)) return '$0.00';
             return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
         };
 
-                // --- 2. SERVICES ---
+        // --- 2. SERVICES ---
         const identityService = new IdentityService(db, logSystemAction);
         const hydrationService = new HydrationService(db, identityService, logSystemAction);
         const queueService = new QueueService(db, logSystemAction);
@@ -1143,12 +1143,6 @@ createApp({
             showBrandDropdown.value = false;
         };
 
-        const formatCurrency = (val) => {
-            const num = parseFloat(val);
-            if (isNaN(num)) return '$0.00';
-            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
-        };
-        
         const detectMonthFromDate = (dateString) => {
             if (!dateString) return 'Unknown';
             const d = new Date(dateString);
