@@ -51,8 +51,25 @@ service cloud.firestore {
           allow read: if true;
         }
 
-        // Promo Credits: Legacy collection (maintaining for backward compatibility)
+                match /vendorMappings/{vendorId} {
+          allow read: if true;
+          allow write: if isAuthorizedManager();
+        }
+        match /brandMappings/{brandId} {
+          allow read: if true;
+          allow write: if isAuthorizedManager();
+        }
+        match /siteMappings/{siteId} {
+          allow read: if true;
+          allow write: if isAuthorizedManager();
+        }
+        match /mappingQueue/{queueId} {
+          allow read: if true;
+          allow write: if isAuthorizedManager();
+        }
 
+        // Promo Credits: Legacy collection (maintaining for backward compatibility)
+    match /promoCredits/{creditId} {
       allow read, write: if isAuthorizedManager();
       allow read: if request.auth == null && resource.data.vendor != null; 
     }
