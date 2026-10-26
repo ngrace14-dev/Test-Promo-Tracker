@@ -22,7 +22,7 @@ export class DiscoveryAggregationEngine {
 
         for (const sale of sales) {
             // 1. Resolve Identity
-            const mapping = await this.identityService.resolveIdentity(sale.brand);
+            const mapping = await this.identityService.resolveBrand(sale.brand);
             
             if (!mapping || !mapping.vendorId) {
                 unmappedBrands.add(sale.brand);
@@ -33,7 +33,7 @@ export class DiscoveryAggregationEngine {
             const key = `${sale.detectedSite}_${mapping.vendorId}_${period.month}_${period.year}`;
 
             if (!groups[key]) {
-                groups[groups] = {
+                groups[key] = {
                     site: sale.detectedSite,
                     vendorId: mapping.vendorId,
                     vendorName: mapping.canonicalName || sale.brand,
