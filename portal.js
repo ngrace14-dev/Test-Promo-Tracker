@@ -177,8 +177,9 @@ createApp({
             search: ''
         });
 
-        const activeSite = ref('Red Bluff');
-        const activeTab = ref('Tracker');
+                const activeSite = ref('Red Bluff');
+                const currentView = ref('DASHBOARD');
+        const discoveryTab = ref('CLAIMS'); // Phase 6D
 
         const systemUsers = {
             'lenay@rredco.com': { name: 'Lenay A.', access: ['Red Bluff', 'Redding'], active: false },
@@ -672,14 +673,14 @@ createApp({
             });
         };
 
-        watch(activeTab, (newTab) => {
-            if (newTab === 'Dashboard') {
+                        watch(currentView, (newView) => {
+            if (newView === 'DASHBOARD' || newView === 'LEGACY_DASHBOARD') {
                 nextTick(() => { drawCharts(); });
             }
         });
 
         watch(promoCredits, () => {
-            if (activeTab.value === 'Dashboard') { drawCharts(); }
+            if (currentView.value === 'DASHBOARD' || currentView.value === 'LEGACY_DASHBOARD') { drawCharts(); }
         }, { deep: true });
 
         const groupedPendingReports = computed(() => {
@@ -993,12 +994,13 @@ createApp({
                 const userEmail = user.email.toLowerCase();
                 const managerData = systemUsers[userEmail];
 
-                if (managerData && managerData.active) {
+                                if (managerData && managerData.active) {
                     // Only unlock Manager view if we aren't currently in a Brand Portal session
                     if (!isBrandUnlocked.value) {
                         loggedInUser.value = managerData.name;
                         activeSite.value = managerData.access[0];
                         isManagerUnlocked.value = true;
+                        currentView.value = 'DASHBOARD';
                     }
 
                     isSuperAdmin.value = managerData.superAdmin || false;
@@ -1070,10 +1072,121 @@ createApp({
             });
         });
 
+                                                                const currentView = ref('DASHBOARD');
+        const activeYear = ref(2026);
+        const sidebarExpanded = ref({
+            DISCOVERY: true,
+            RECOVERY: false,
+            LEDGER: false,
+            VALIDATION: false,
+            IDENTITY: false,
+            ARCHIVE: false
+        });
+
+        // FORCE RENDER PRIORITY (STAGE 1)
+        onMounted(() => {
+            currentView.value = 'DASHBOARD';
+            refreshIcons();
+        });
+
+        const toggleGroup = (group) => {
+            sidebarExpanded.value[group] = !sidebarExpanded.value[group];
+        };
+
+        const activeSite = ref('Combined');
+
+        // MOCK DATA FOR SHELLS
+        const mockAging = [
+            { vendor: 'Kiva Confections', store: 'Redding', generated: 45000, recovered: 42000, outstanding: 3000, '0-30': 1500, '31-60': 1000, '61-90': 500, '91-120': 0, '120+': 0, status: 'OPEN' },
+            { vendor: 'Wyld', store: 'Red Bluff', generated: 32000, recovered: 32000, outstanding: 0, '0-30': 0, '31-60': 0, '61-90': 0, '91-120': 0, '120+': 0, status: 'LOCKED' },
+            { vendor: 'Jeeter', store: 'Redding', generated: 15000, recovered: 5000, outstanding: 10000, '0-30': 2000, '31-60': 3000, '61-90': 5000, '91-120': 0, '120+': 0, status: 'OPEN' }
+        ];
+
+        const calibrationStats = {
+            workbook: 2450800,
+            pcrp: 2450674.60,
+            variance: 125.40,
+            parity: '99.9%'
+        };
+
+        // DISCOVERY ENGINE STATE (PHASE 6D)
+        const discoveryHealth = computed(() => ({
+            lastSuccess: 'Oct 26, 2026',
+            lastFailed: 'None',
+            unmappedVendors: mappingQueue.value.length,
+            workbookVariance: formatCurrency(125.40),
+            claimCount: promoCredits.value.length,
+            totalDiscovery: formatCurrency(promoCredits.value.reduce((s,c) => s + (parseFloat(c.amount)||0), 0))
+        }));
+
+        const importBatches = ref([
+            { id: 'BATCH-101', filename: 'August_2026_Treez.csv', date: '2026-08-05', records: 4502, status: 'Workbook Match', type: 'Discovery' },
+            { id: 'BATCH-102', filename: 'Sept_2026_Treez.csv', date: '2026-09-04', records: 3890, status: 'Validated', type: 'Discovery' },
+            { id: 'BATCH-103', filename: 'Sage_Export_Oct.csv', date: '2026-10-10', records: 120, status: 'Processing', type: 'Recovery' }
+        ]);
+
+        const executiveKPIs = computed(() => [
+            { label: 'Discovery YTD', value: formatCurrency(2450800), color: 'text-gray-900' },
+            { label: 'Recovery YTD', value: formatCurrency(2105400), color: 'text-emerald-600' },
+            { label: 'Outstanding', value: formatCurrency(345400), color: 'text-amber-500' },
+            { label: 'Recovery %', value: '85.9%', color: 'text-emerald-500', subtext: 'Target: 95%' },
+            { label: 'Workbook Parity', value: '99.9%', color: 'text-blue-500', subtext: 'WB: $2.45M / PCRP: $2.45M' },
+            { label: 'Variance', value: formatCurrency(125.40), color: 'text-red-500', subtext: 'Investigation Required' }
+        ]);
+
+        const getWorkbookMapping = (view) => {
+            const mappings = {
+                'DASHBOARD': 'YTD Dashboard',
+                'IMPORT_CENTER': 'Discovery Data / Recovery Tracking',
+                'DISCOVERY': 'Monthly Discovery Data',
+                'RECOVERY': 'Recovery Tracking',
+                'LEDGER': 'YTD Running Totals',
+                'VALIDATION': 'Board Recon (Redding/RB)',
+                'IDENTITY': 'Brand Mapping',
+                'ARCHIVE': 'Annual Archive',
+                'LOGS': 'Internal System Audit'
+            };
+            return mappings[view] || 'TBD';
+        };
+
+        const getServiceMapping = (view) => {
+            const mappings = {
+                'DASHBOARD': 'AnalyticsEngine',
+                'IMPORT_CENTER': 'WorkbookSyncService',
+                'DISCOVERY': 'DiscoveryAggregationEngine',
+                'RECOVERY': 'WorkbookSyncService',
+                'LEDGER': 'LedgerService (Future)',
+                'VALIDATION': 'ValidationEngine (Future)',
+                'IDENTITY': 'IdentityService',
+                'ARCHIVE': 'AnnualArchiveService',
+                'LOGS': 'AuditLogger'
+            };
+            return mappings[view] || 'TBD';
+        };
+
+                // RECOVERY LOG STATE (PHASE 6E)
+        const recoveryStats = computed(() => ({
+            totalResolved: formatCurrency(2105400),
+            pendingSettlements: 42,
+            avgVelocity: '14.2 Days',
+            unlinkedMemos: 5
+        }));
+
+        const sageRecoveries = ref([
+            { id: 'REC-001', vendor: 'Kiva Confections', amount: 5400.00, memo: 'CM-99281', status: 'Applied', date: '2026-08-15' },
+            { id: 'REC-002', vendor: 'Wyld', amount: 3200.50, memo: 'ACH-7721', status: 'Applied', date: '2026-08-18' },
+            { id: 'REC-003', vendor: 'Jeeter', amount: 1250.00, memo: 'CM-8831', status: 'Unlinked', date: '2026-08-20' }
+        ]);
+
                 const handleLogin = () => {
             authError.value = '';
             signInWithEmailAndPassword(auth, emailInput.value.trim(), passwordInput.value)
-                .then(() => { emailInput.value = ''; passwordInput.value = ''; refreshIcons(); })
+                .then(() => { 
+                    emailInput.value = ''; 
+                    passwordInput.value = ''; 
+                    currentView.value = 'DASHBOARD';
+                    refreshIcons(); 
+                })
                 .catch((error) => { authError.value = "Invalid email or password."; });
         };
 
@@ -1609,10 +1722,10 @@ createApp({
                 }
                 logSystemAction("UPDATE", `Synced and aggregated ${creditsCreated} vendor credits`);
                 alert(`Success! Aggregated ${creditsCreated} vendor credits and pushed them to Firebase.`);
-                activeTab.value = 'Tracker'; 
+                                currentView.value = 'DISCOVERY'; 
             } catch (err) { 
-                console.error(err);
-                alert("Failed to sync aggregated credits to the cloud."); 
+                                console.error(err);
+                                alert("Failed to sync aggregated credits to the cloud."); 
             }
         };
 
@@ -2028,12 +2141,12 @@ createApp({
                     refreshIcons();
                 });
 
-                return {
+                                return {
                     selectedRole, isManagerUnlocked, isBrandUnlocked, isPreviewMode, activeBrand, brandTab, 
                     loggedInUser, emailInput, passwordInput, authError, 
                     brandEmailInput, brandCodeInput, brandAuthError,
                     isSuperAdmin,
-                    activeSite, activeTab,
+                    activeSite,
                     treesSalesData, masterBrands, selectedBrands, allBrandsSelected, toggleAllBrands,
 
             deleteSelectedBrands, updateBrandField, toggleBrandActive, promoCredits, calendarMonths, activeMonth,
@@ -2050,12 +2163,17 @@ createApp({
             regenerateMonthReports, handleTreesCsvUpload, pushToMainTracker, resetBrandImport,
             processBrandRawPaste, processBrandImport, systemLogs, refreshIcons, clearAllSalesData,
                         detectMonthInString, drawCharts, openDimeHelper, exportVendorsAndBrandsCSV, generateAccessCode,
-                                    brandCredits, brandStats, brandHistory, bulkGenerateCodes,
-                                    brandFilters, exportFilteredBrandData,
+                                    brandCredits, brandStats, brandHistory,                                                                                                             bulkGenerateCodes,
+                                    importBatches, discoveryHealth,
+                                    sageRecoveries, recoveryStats,
+                                    currentView, sidebarExpanded, toggleGroup,
+                                    activeYear, activeMonth, activeSite,
+                                    mockAging, calibrationStats,
+                                                                        brandFilters, exportFilteredBrandData,
                                                 builder, builderOptions, builderPreviewData, runBuilderExport,
                         publishReport, isReportPublished, isPublishing, pushMonthToBrands,
 
-
+                        discoveryTab, // Phase 6D
 
                                                 creditRequests, updateRequestStatus, reconcileRequest, getStatusDisplayName, getStatusColor,
                         STATUS_DEFINITIONS, isLogsMinimized,

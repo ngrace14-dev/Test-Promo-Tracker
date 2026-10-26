@@ -1,24 +1,56 @@
-/* styles.css */
-/* Mobile viewport height fix */
-body { font-family: 'Calibri', 'Segoe UI', Candara, 'Bitstream Vera Sans', 'DejaVu Sans', 'Bitstream Vera Sans', 'Trebuchet MS', Verdana, 'Verdana Ref', sans-serif; background-color: #f3f4f6; margin: 0; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
-
-
-.excel-table { border-collapse: separate; border-spacing: 0; font-size: 13px; background-color: white; width: 100%; text-align: left; }
-.excel-table th, .excel-table td { border-bottom: 1px solid #d1d5db; border-right: 1px solid #d1d5db; padding: 8px 12px; white-space: nowrap; }
-.excel-table th { font-weight: 700; background-color: #f8f9fa; color: #374151; border-top: 1px solid #d1d5db; }
-.excel-table th:first-child, .excel-table td:first-child { border-left: 1px solid #d1d5db; }
-[v-cloak] { display: none; }
-
-::-webkit-scrollbar { height: 8px; width: 8px; }
-::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-
-.no-scrollbar::-webkit-scrollbar { display: none; }
-.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-/* Only make actions column sticky on Desktop to save mobile screen space */
-@media (min-width: 768px) {
-    .sticky-col { position: sticky; right: 0; background-color: white; box-shadow: -3px 0 5px rgba(0,0,0,0.05); z-index: 10; }
-    .sticky-head { position: sticky; right: 0; background-color: #f8f9fa; box-shadow: -3px 0 5px rgba(0,0,0,0.05); z-index: 15; }
+/* Financial Control Center Styles - Light Theme */
+:root {
+    --obsidian: #0f172a;
+    --emerald-primary: #10b981;
+    --amber-primary: #f59e0b;
+    --workspace-bg: #f1f5f9;
 }
+
+body { 
+    font-family: 'Inter', 'Calibri', 'Segoe UI', sans-serif; 
+    background-color: var(--workspace-bg); 
+    color: var(--obsidian);
+    margin: 0; 
+    height: 100dvh; 
+    display: flex; 
+    flex-direction: column; 
+    overflow: hidden; 
+}
+
+/* Sidebar Accordion - Light */
+.sidebar-link {
+    @apply flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-semibold;
+}
+.sidebar-link-active {
+    @apply bg-emerald-50 text-emerald-600 border-l-4 border-emerald-500 rounded-l-none;
+}
+.sidebar-link-inactive {
+    @apply text-slate-500 hover:bg-slate-50 hover:text-slate-900;
+}
+
+/* High-Density Grid (Excel Inspired) */
+.hd-grid {
+    @apply w-full border-collapse bg-white text-[12px];
+}
+.hd-grid th {
+    @apply sticky top-0 bg-slate-50 border-b border-r border-slate-200 p-2 text-slate-500 font-bold uppercase tracking-wider text-[10px] z-10;
+}
+.hd-grid td {
+    @apply border-b border-r border-slate-100 p-2 whitespace-nowrap;
+}
+.hd-grid tr:hover {
+    @apply bg-slate-50/80;
+}
+
+/* Status Ticker */
+.ticker-item {
+    @apply flex flex-col border-r border-slate-200 px-4 last:border-0;
+}
+.ticker-label {
+    @apply text-[9px] font-black text-slate-400 uppercase tracking-widest;
+}
+.ticker-value {
+    @apply text-xs font-bold text-slate-900;
+}
+
+

@@ -15,9 +15,686 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-        <div id="app" class="h-full flex flex-col bg-gray-100" v-cloak>
+            <div id="app" class="h-screen flex flex-col bg-gray-100 overflow-hidden" v-cloak data-pcrp-version="4.0.1-activated">
+
         
+                                <!-- AUTHENTICATED EMPLOYEE UI -->
+        <template v-if="isManagerUnlocked && !isBrandUnlocked && !currentView?.startsWith('LEGACY_')">
+            <!-- GLOBAL HEADER -->
+            <header class="bg-white text-slate-900 px-6 py-3 flex justify-between items-center shrink-0 shadow-sm z-30 border-b border-slate-200">
+                <div class="flex items-center gap-6">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-emerald-500 p-1.5 rounded-lg shadow-sm">
+                            <i data-lucide="badge-dollar-sign" class="w-6 h-6 text-white"></i>
+                        </div>
+                        <div>
+                            <h1 class="font-black tracking-tight text-lg leading-tight uppercase">PCRP <span class="text-emerald-500 ml-1">v4.0</span></h1>
+                            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span> Live Workbook Sync
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- GLOBAL FILTERS -->
+                    <div class="flex items-center bg-slate-50 rounded-xl p-1 border border-slate-200 ml-4">
+                        <select v-model="activeYear" class="bg-transparent text-xs font-bold px-3 py-1.5 outline-none border-r border-slate-200 text-slate-600">
+                            <option v-for="y in [2024, 2025, 2026]" :key="y" :value="y">{{ y }}</option>
+                        </select>
+                        <select v-model="activeMonth" class="bg-transparent text-xs font-bold px-3 py-1.5 outline-none border-r border-slate-200 text-slate-600">
+                            <option value="All">All Year</option>
+                            <option v-for="m in calendarMonths" :key="m" :value="m">{{ m }}</option>
+                        </select>
+                        <div class="flex items-center px-1">
+                            <button @click="activeSite = 'Red Bluff'" :class="activeSite === 'Red Bluff' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'" class="px-4 py-1.5 rounded-lg text-xs font-black transition-all">Red Bluff</button>
+                            <button @click="activeSite = 'Redding'" :class="activeSite === 'Redding' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'" class="px-4 py-1.5 rounded-lg text-xs font-black transition-all">Redding</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-6">
+                    <!-- Status Ticker -->
+                    <div class="hidden lg:flex items-center">
+                        <div class="ticker-item">
+                            <span class="ticker-label">Parity</span>
+                            <span class="ticker-value text-emerald-600">99.9%</span>
+                        </div>
+                        <div class="ticker-item">
+                            <span class="ticker-label">Variance</span>
+                            <span class="ticker-value text-red-500">$125.40</span>
+                        </div>
+                    </div>
+
+                    <div class="h-8 w-px bg-slate-200"></div>
+
+                    <button @click="openImportModal" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest shadow-md transition-all flex items-center gap-2">
+                        <i data-lucide="plus-circle" class="w-4 h-4"></i> New Import
+                    </button>
+
+                    <button @click="forceLock" class="text-slate-400 hover:text-red-500 transition-colors">
+                        <i data-lucide="log-out" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </header>
+
+            <div class="flex-1 flex overflow-hidden">
+                                <!-- SIDEBAR NAVIGATION -->
+                <aside class="w-72 bg-white border-r border-slate-200 flex flex-col shrink-0 z-20 overflow-y-auto no-scrollbar">
+                    <nav class="p-4 space-y-6">
+                        <!-- Navigation Groups -->
+                        <div>
+                            <p class="px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Governance</p>
+                            <div class="space-y-1">
+                                <button @click="currentView = 'DASHBOARD'" :class="currentView === 'DASHBOARD' ? 'sidebar-link-active' : 'sidebar-link-inactive'" class="sidebar-link w-full">
+                                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i> Executive Dashboard
+                                </button>
+                                <button @click="currentView = 'IMPORT_CENTER'" :class="currentView === 'IMPORT_CENTER' ? 'sidebar-link-active' : 'sidebar-link-inactive'" class="sidebar-link w-full">
+                                    <i data-lucide="terminal" class="w-5 h-5"></i> Import Control Center
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <p class="px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Reconciliation</p>
+                            <div class="space-y-1">
+                                <button @click="currentView = 'DISCOVERY'" :class="currentView === 'DISCOVERY' ? 'sidebar-link-active' : 'sidebar-link-inactive'" class="sidebar-link w-full">
+                                    <i data-lucide="search" class="w-5 h-5"></i> Discovery Engine
+                                </button>
+                                <button @click="currentView = 'RECOVERY'" :class="currentView === 'RECOVERY' ? 'sidebar-link-active' : 'sidebar-link-inactive'" class="sidebar-link w-full">
+                                    <i data-lucide="history" class="w-5 h-5"></i> Recovery Log
+                                </button>
+                                <button @click="currentView = 'LEDGER'" :class="currentView === 'LEDGER' ? 'sidebar-link-active' : 'sidebar-link-inactive'" class="sidebar-link w-full">
+                                    <i data-lucide="book-open" class="w-5 h-5"></i> Master Ledger
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <p class="px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Calibration</p>
+                            <div class="space-y-1">
+                                <button @click="currentView = 'VALIDATION'" :class="currentView === 'VALIDATION' ? 'sidebar-link-active' : 'sidebar-link-inactive'" class="sidebar-link w-full">
+                                    <i data-lucide="check-circle-2" class="w-5 h-5"></i> Workbook Validation
+                                </button>
+                                <button @click="currentView = 'IDENTITY'" :class="currentView === 'IDENTITY' ? 'sidebar-link-active' : 'sidebar-link-inactive'" class="sidebar-link w-full">
+                                    <i data-lucide="fingerprint" class="w-5 h-5"></i> Identity Hub
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <p class="px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">System</p>
+                            <div class="space-y-1">
+                                <button @click="currentView = 'ARCHIVE'" :class="currentView === 'ARCHIVE' ? 'sidebar-link-active' : 'sidebar-link-inactive'" class="sidebar-link w-full">
+                                    <i data-lucide="archive" class="w-5 h-5"></i> Forensic Archive
+                                </button>
+                                <button v-if="isSuperAdmin" @click="currentView = 'LOGS'" :class="currentView === 'LOGS' ? 'sidebar-link-active' : 'sidebar-link-inactive'" class="sidebar-link w-full">
+                                    <i data-lucide="activity" class="w-5 h-5"></i> System Logs
+                                </button>
+                            </div>
+                        </div>
+                    </nav>
+
+                    <!-- LEGACY ARCHIVE (Deactivated Shell) -->
+                    <div class="mt-auto p-4 border-t border-slate-100">
+                        <button @click="currentView = 'LEGACY_DASHBOARD'" :class="currentView.startsWith('LEGACY_') ? 'bg-amber-50 text-amber-600' : 'text-slate-400 hover:text-slate-600'" class="w-full flex items-center justify-between p-3 rounded-xl transition-all group">
+                            <div class="flex items-center gap-3">
+                                <i data-lucide="archive-restore" class="w-4 h-4"></i>
+                                <span class="text-xs font-black uppercase tracking-widest">Legacy Archive</span>
+                            </div>
+                            <i v-if="currentView.startsWith('LEGACY_')" data-lucide="chevron-right" class="w-3 h-3"></i>
+                        </button>
+
+                        <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200 mt-4">
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">System Parity</p>
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold text-slate-600">Workbook Calibration</span>
+                                <span class="text-xs font-black text-emerald-600">99.9%</span>
+                            </div>
+                            <div class="w-full bg-slate-200 h-1.5 rounded-full mt-2 overflow-hidden">
+                                <div class="bg-emerald-500 h-full w-[99.9%]"></div>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
+
+
+
+                <!-- MAIN VIEWPORT -->
+                <main class="flex-1 overflow-hidden flex flex-col">
+                    
+                    <!-- EXECUTIVE DASHBOARD VIEW -->
+                    <div v-if="currentView === 'DASHBOARD'" class="flex-1 overflow-y-auto p-8 space-y-8 bg-gray-100">
+                        <div class="flex justify-between items-end">
+                            <div>
+                                <h2 class="text-3xl font-black text-gray-900">Executive Dashboard</h2>
+                                <p class="text-gray-500 font-medium">YTD Workbook Performance & Recovery Analytics</p>
+                            </div>
+                            <div class="bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-200 flex items-center gap-2">
+                                <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i>
+                                <span class="text-xs font-black text-gray-900 uppercase">Workbook Spec: YTD Dashboard</span>
+                            </div>
+                        </div>
+
+                        <!-- KPI ROW (Approved Model) -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                            <div v-for="kpi in executiveKPIs" :key="kpi.label" class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
+                                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{{ kpi.label }}</p>
+                                <p class="text-2xl font-black" :class="kpi.color">{{ kpi.value }}</p>
+                                <p v-if="kpi.subtext" class="text-[10px] font-bold text-gray-400 mt-1 uppercase">{{ kpi.subtext }}</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                            <!-- Placeholder for Trends -->
+                            <div class="bg-white p-8 rounded-3xl shadow-sm border border-gray-200 min-h-[400px] flex flex-col items-center justify-center text-center">
+                                <i data-lucide="bar-chart-3" class="w-12 h-12 text-gray-200 mb-4"></i>
+                                <h3 class="text-gray-400 font-black uppercase">Discovery vs Recovery Trend</h3>
+                                <p class="text-gray-300 text-sm mt-1">Component: ChartWrapper (DiscoveryTrend)</p>
+                            </div>
+                            <div class="bg-white p-8 rounded-3xl shadow-sm border border-gray-200 min-h-[400px] flex flex-col items-center justify-center text-center">
+                                <i data-lucide="gauge" class="w-12 h-12 text-gray-200 mb-4"></i>
+                                <h3 class="text-gray-400 font-black uppercase">Recovery Efficiency Gauge</h3>
+                                <p class="text-gray-300 text-sm mt-1">Component: ChartWrapper (RecoveryRadial)</p>
+                            </div>
+                        </div>
+                    </div>
+
+                                        <!-- DISCOVERY ENGINE VIEW (PHASE 6D) -->
+                    <div v-if="currentView === 'DISCOVERY'" class="flex-1 overflow-hidden flex flex-col bg-gray-100">
+                        <!-- Header & Discovery Health Panel -->
+                        <div class="p-8 pb-0 space-y-6">
+                            <div class="flex justify-between items-end">
+                                <div>
+                                    <h2 class="text-3xl font-black text-gray-900">Discovery Engine</h2>
+                                    <p class="text-gray-500 font-medium">Aggregating raw POS data into Workbook claims</p>
+                                </div>
+                                <div class="bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-200 flex items-center gap-2">
+                                    <i data-lucide="shield-check" class="w-4 h-4 text-emerald-600"></i>
+                                    <span class="text-xs font-black text-gray-900 uppercase">Workbook Spec: GL Raw / Discovery Data</span>
+                                </div>
+                            </div>
+
+                            <!-- Discovery Health Panel -->
+                            <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                                <div class="bg-gray-950 p-4 rounded-2xl border border-gray-800">
+                                    <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Last Success</p>
+                                    <p class="text-sm font-bold text-emerald-400">{{ discoveryHealth.lastSuccess }}</p>
+                                </div>
+                                <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
+                                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Unmapped</p>
+                                    <p class="text-lg font-black" :class="discoveryHealth.unmappedVendors > 0 ? 'text-amber-500' : 'text-gray-900'">{{ discoveryHealth.unmappedVendors }} Vendors</p>
+                                </div>
+                                <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
+                                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">WB Variance</p>
+                                    <p class="text-lg font-black text-red-500">{{ discoveryHealth.workbookVariance }}</p>
+                                </div>
+                                <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
+                                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Claim Count</p>
+                                    <p class="text-lg font-black text-gray-900">{{ discoveryHealth.claimCount }}</p>
+                                </div>
+                                <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm lg:col-span-2">
+                                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Discovery</p>
+                                    <p class="text-lg font-black text-emerald-600">{{ discoveryHealth.totalDiscovery }}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Main Discovery Tabs -->
+                        <div class="flex-1 flex flex-col p-8 pt-6 overflow-hidden">
+                            <div class="bg-white rounded-[2.5rem] shadow-xl border border-gray-200 flex-1 flex flex-col overflow-hidden">
+                                                                <!-- Inner Tab Nav -->
+                                <div class="px-8 pt-6 border-b border-gray-100 flex gap-8">
+                                    <button @click="discoveryTab = 'CLAIMS'" :class="discoveryTab === 'CLAIMS' ? 'border-emerald-500 text-gray-900' : 'border-transparent text-gray-400 hover:text-gray-600'" class="pb-4 border-b-4 font-black text-sm uppercase tracking-widest transition-all">Discovery Claims</button>
+                                    <button @click="discoveryTab = 'BATCHES'" :class="discoveryTab === 'BATCHES' ? 'border-emerald-500 text-gray-900' : 'border-transparent text-gray-400 hover:text-gray-600'" class="pb-4 border-b-4 font-black text-sm uppercase tracking-widest transition-all">Batch Status</button>
+                                    <button @click="discoveryTab = 'HISTORY'" :class="discoveryTab === 'HISTORY' ? 'border-emerald-500 text-gray-900' : 'border-transparent text-gray-400 hover:text-gray-600'" class="pb-4 border-b-4 font-black text-sm uppercase tracking-widest transition-all">Import History</button>
+                                </div>
+
+                                <!-- Claims Grid -->
+                                <div v-if="discoveryTab === 'CLAIMS'" class="flex-1 overflow-auto p-4">
+                                    <table class="excel-table w-full">
+                                        <thead class="sticky top-0 bg-gray-50 z-10">
+                                            <tr>
+                                                <th>Site</th>
+                                                <th>Vendor</th>
+                                                <th>Month</th>
+                                                <th>Claim Amount</th>
+                                                <th>Records</th>
+                                                <th>Status</th>
+                                                <th class="text-center">Parity</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="c in filteredCredits" :key="c.id" class="hover:bg-emerald-50/50">
+                                                <td class="font-bold text-xs uppercase">{{ c.site }}</td>
+                                                <td class="font-black text-gray-900">
+                                                    <div class="flex items-center gap-2">
+                                                        <i v-if="c.needsMapping" data-lucide="alert-triangle" class="w-4 h-4 text-amber-500"></i>
+                                                        {{ c.vendor }}
+                                                    </div>
+                                                </td>
+                                                <td class="text-gray-500 font-bold">{{ c.trackingMonth }}</td>
+                                                <td class="font-black text-emerald-600">{{ formatCurrency(c.amount) }}</td>
+                                                <td class="text-gray-400 text-xs font-bold">120 Transactions</td>
+                                                <td>
+                                                    <span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-[10px] font-black uppercase">Generated</span>
+                                                </td>
+                                                <td class="text-center">
+                                                    <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500 mx-auto"></i>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                                                </div>
+
+                                <!-- Batch Status Grid -->
+                                <div v-if="discoveryTab === 'BATCHES'" class="flex-1 overflow-auto p-4">
+                                    <table class="excel-table w-full">
+                                        <thead class="sticky top-0 bg-gray-50 z-10">
+                                            <tr>
+                                                <th>Batch ID</th>
+                                                <th>File</th>
+                                                <th>Date</th>
+                                                <th>Records</th>
+                                                <th>Status</th>
+                                                <th class="text-center">Verification</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="batch in importBatches.filter(b => b.type === 'Discovery')" :key="batch.id">
+                                                <td class="font-mono text-[10px] font-bold">{{ batch.id }}</td>
+                                                <td class="text-xs font-bold">{{ batch.filename }}</td>
+                                                <td class="text-gray-500 text-xs">{{ batch.date }}</td>
+                                                <td class="text-xs">{{ batch.records }}</td>
+                                                <td>
+                                                    <span :class="{
+                                                        'bg-emerald-100 text-emerald-700': batch.status === 'Workbook Match',
+                                                        'bg-blue-100 text-blue-700': batch.status === 'Validated',
+                                                        'bg-amber-100 text-amber-700': batch.status === 'Processing'
+                                                    }" class="px-2 py-0.5 rounded text-[10px] font-black uppercase">
+                                                        {{ batch.status }}
+                                                    </span>
+                                                </td>
+                                                <td class="text-center">
+                                                    <i v-if="batch.status === 'Workbook Match'" data-lucide="shield-check" class="w-4 h-4 text-emerald-500 mx-auto"></i>
+                                                    <i v-else data-lucide="circle" class="w-4 h-4 text-gray-200 mx-auto"></i>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <!-- Import History Grid -->
+                                <div v-if="discoveryTab === 'HISTORY'" class="flex-1 overflow-auto p-4">
+                                    <div class="flex flex-col items-center justify-center h-full text-center p-8">
+                                        <div class="bg-gray-50 w-16 h-16 rounded-2xl flex items-center justify-center mb-4">
+                                            <i data-lucide="history" class="w-8 h-8 text-gray-300"></i>
+                                        </div>
+                                        <h4 class="text-gray-400 font-black uppercase tracking-widest text-xs">No History Found</h4>
+                                        <p class="text-gray-300 text-[10px] max-w-xs mt-2">The import history log is currently being calibrated with the Workbook sync engine.</p>
+                                    </div>
+                                </div>
+
+                                <!-- Action Footer -->
+                                <div class="p-6 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
+                                    <div class="flex gap-4">
+                                        <div v-if="mappingQueueCount > 0" class="bg-amber-50 border border-amber-200 px-4 py-2 rounded-xl flex items-center gap-3">
+                                            <i data-lucide="fingerprint" class="w-5 h-5 text-amber-500"></i>
+                                            <span class="text-xs font-bold text-amber-800">{{ mappingQueueCount }} Identity Warnings Detected</span>
+                                            <button @click="currentView = 'IDENTITY'" class="text-[10px] font-black text-amber-600 underline uppercase ml-2">Resolve Now</button>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-[10px] font-black text-gray-400 uppercase mr-4">Sync Status: <span class="text-emerald-500">Live</span></span>
+                                        <button @click="openImportModal" class="bg-gray-950 text-white px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-gray-800 transition-all flex items-center gap-2">
+                                            <i data-lucide="plus" class="w-4 h-4"></i> New Import Batch
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- IMPORT CONTROL CENTER VIEW (PHASE 6D) -->
+                    <div v-if="currentView === 'IMPORT_CENTER'" class="flex-1 overflow-hidden flex flex-col p-8 bg-gray-100">
+                        <div class="mb-8 flex justify-between items-end">
+                            <div>
+                                <h2 class="text-3xl font-black text-gray-900">Import Control Center</h2>
+                                <p class="text-gray-500 font-medium">Platform-wide data ingestion and queue monitor</p>
+                            </div>
+                            <div class="bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-200 flex items-center gap-2">
+                                <i data-lucide="terminal" class="w-4 h-4 text-blue-600"></i>
+                                <span class="text-xs font-black text-gray-900 uppercase">Workbook Spec: Import Operations</span>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1 min-h-0">
+                            <!-- Discovery Feed -->
+                            <div class="bg-white rounded-3xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
+                                <div class="p-6 border-b bg-gray-50 flex justify-between items-center">
+                                    <h3 class="font-black text-gray-900 uppercase text-sm flex items-center gap-2">
+                                        <i data-lucide="cloud-upload" class="w-5 h-5 text-amber-500"></i> Treez Discovery Imports
+                                    </h3>
+                                    <button @click="openImportModal" class="bg-gray-950 text-amber-500 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-gray-800 transition-all">New Treez CSV</button>
+                                </div>
+                                <div class="flex-1 overflow-auto">
+                                    <table class="excel-table w-full">
+                                        <thead class="bg-gray-50 sticky top-0">
+                                            <tr>
+                                                <th>Batch ID</th>
+                                                <th>File</th>
+                                                <th>Records</th>
+                                                <th>Verification Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="batch in importBatches.filter(b => b.type === 'Discovery')" :key="batch.id">
+                                                <td class="font-mono text-[10px] font-bold">{{ batch.id }}</td>
+                                                <td class="text-xs font-bold">{{ batch.filename }}</td>
+                                                <td class="text-xs">{{ batch.records }}</td>
+                                                <td>
+                                                    <span :class="{
+                                                        'bg-emerald-100 text-emerald-700': batch.status === 'Workbook Match',
+                                                        'bg-blue-100 text-blue-700': batch.status === 'Validated',
+                                                        'bg-amber-100 text-amber-700': batch.status === 'Processing'
+                                                    }" class="px-2 py-0.5 rounded text-[10px] font-black uppercase whitespace-nowrap">
+                                                        {{ batch.status }}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Recovery Feed -->
+                            <div class="bg-white rounded-3xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
+                                <div class="p-6 border-b bg-gray-50 flex justify-between items-center">
+                                    <h3 class="font-black text-gray-900 uppercase text-sm flex items-center gap-2">
+                                        <i data-lucide="refresh-cw" class="w-5 h-5 text-emerald-500"></i> Sage Recovery Imports
+                                    </h3>
+                                    <button class="bg-gray-950 text-emerald-500 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-gray-800 transition-all">New Sage CSV</button>
+                                </div>
+                                <div class="flex-1 overflow-auto">
+                                    <table class="excel-table w-full">
+                                        <thead class="bg-gray-50 sticky top-0">
+                                            <tr>
+                                                <th>Batch ID</th>
+                                                <th>File</th>
+                                                <th>Records</th>
+                                                <th>Verification Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="batch in importBatches.filter(b => b.type === 'Recovery')" :key="batch.id">
+                                                <td class="font-mono text-[10px] font-bold">{{ batch.id }}</td>
+                                                <td class="text-xs font-bold">{{ batch.filename }}</td>
+                                                <td class="text-xs">{{ batch.records }}</td>
+                                                <td>
+                                                    <span :class="{
+                                                        'bg-amber-100 text-amber-700 animate-pulse': batch.status === 'Processing'
+                                                    }" class="px-2 py-0.5 rounded text-[10px] font-black uppercase">
+                                                        {{ batch.status }}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            <tr v-if="importBatches.filter(b => b.type === 'Recovery').length === 0">
+                                                <td colspan="4" class="text-center py-10 text-gray-400 italic text-xs font-bold">No Sage imports found.</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+                                        <!-- RECOVERY LOG VIEW (PHASE 6E) -->
+                    <div v-if="currentView === 'RECOVERY'" class="flex-1 overflow-hidden flex flex-col bg-gray-100">
+                        <!-- Header & Recovery Analytics -->
+                        <div class="p-8 pb-0 space-y-6">
+                            <div class="flex justify-between items-end">
+                                <div>
+                                    <h2 class="text-3xl font-black text-gray-900">Recovery Log</h2>
+                                    <p class="text-gray-500 font-medium">Tracking settlements and Sage AP/AR reconciliation</p>
+                                </div>
+                                <div class="bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-200 flex items-center gap-2">
+                                    <i data-lucide="shield-check" class="w-4 h-4 text-emerald-600"></i>
+                                    <span class="text-xs font-black text-gray-900 uppercase">Workbook Spec: Recovery Tracking</span>
+                                </div>
+                            </div>
+
+                            <!-- Recovery KPI Row -->
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
+                                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Resolved</p>
+                                    <p class="text-2xl font-black text-emerald-600">{{ recoveryStats.totalResolved }}</p>
+                                </div>
+                                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
+                                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Avg Velocity</p>
+                                    <p class="text-2xl font-black text-blue-600">{{ recoveryStats.avgVelocity }}</p>
+                                </div>
+                                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
+                                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Unlinked Memos</p>
+                                    <p class="text-2xl font-black" :class="recoveryStats.unlinkedMemos > 0 ? 'text-amber-500' : 'text-gray-900'">{{ recoveryStats.unlinkedMemos }}</p>
+                                </div>
+                                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
+                                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Pending Settlements</p>
+                                    <p class="text-2xl font-black text-gray-900">{{ recoveryStats.pendingSettlements }}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Main Recovery Body -->
+                        <div class="flex-1 flex p-8 pt-6 gap-8 overflow-hidden">
+                            <!-- Left: Sage Feed -->
+                            <div class="flex-[1.5] bg-white rounded-[2.5rem] shadow-xl border border-gray-200 flex flex-col overflow-hidden">
+                                <div class="p-6 border-b bg-gray-50 flex justify-between items-center">
+                                    <h3 class="font-black text-gray-900 uppercase text-sm">Settlement Feed (Sage)</h3>
+                                    <div class="relative">
+                                        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                                        <input type="text" placeholder="Memo/Check #" class="pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-emerald-500 outline-none">
+                                    </div>
+                                </div>
+                                <div class="flex-1 overflow-auto p-4">
+                                    <table class="excel-table w-full">
+                                        <thead class="sticky top-0 bg-gray-50 z-10">
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Vendor</th>
+                                                <th>Reference #</th>
+                                                <th>Amount</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="rec in sageRecoveries" :key="rec.id" class="hover:bg-emerald-50/50">
+                                                <td class="text-xs font-bold text-gray-400">{{ rec.date }}</td>
+                                                <td class="font-black text-gray-900">{{ rec.vendor }}</td>
+                                                <td class="font-mono text-xs">{{ rec.memo }}</td>
+                                                <td class="font-black text-emerald-600">{{ formatCurrency(rec.amount) }}</td>
+                                                <td>
+                                                    <span :class="rec.status === 'Applied' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'" class="px-2 py-0.5 rounded text-[10px] font-black uppercase">
+                                                        {{ rec.status }}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Right: Recovery Velocity Chart Placeholder -->
+                            <div class="flex-1 space-y-8 overflow-y-auto pr-2">
+                                <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-200 min-h-[300px] flex flex-col items-center justify-center text-center">
+                                    <i data-lucide="trending-up" class="w-12 h-12 text-gray-200 mb-4"></i>
+                                    <h4 class="text-gray-400 font-black uppercase">Recovery Velocity</h4>
+                                    <p class="text-gray-300 text-sm mt-1">Component: ChartWrapper (VelocityArea)</p>
+                                </div>
+                                <div class="bg-gray-950 p-8 rounded-[2.5rem] shadow-2xl border border-gray-800 min-h-[300px] flex flex-col items-center justify-center text-center">
+                                    <i data-lucide="gantt-chart" class="w-12 h-12 text-gray-800 mb-4"></i>
+                                    <h4 class="text-gray-500 font-black uppercase">Settlement Timeline</h4>
+                                    <p class="text-gray-600 text-sm mt-1">Discovery &rarr; Recovery Lag Audit</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                                            <!-- IDENTITY HUB VIEW (INTEGRATED PHASE 3) -->
+                                            <div v-if="currentView === 'IDENTITY'" class="flex-1 overflow-hidden flex flex-col bg-slate-50 p-8">
+                                                <div class="mb-8 flex justify-between items-end">
+                                                    <div>
+                                                        <h2 class="text-3xl font-black text-slate-900 tracking-tight">Identity Hub</h2>
+                                                        <p class="text-slate-500 font-medium">Canonical resolution between POS Brands and Sage Vendors</p>
+                                                    </div>
+                                                    <div class="flex gap-3">
+                                                        <button @click="showVendorModal = true" class="bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest shadow-md hover:bg-slate-800 transition-all flex items-center gap-2">
+                                                            <i data-lucide="plus" class="w-4 h-4 text-emerald-500"></i> New Canonical Vendor
+                                                        </button>
+                                                        <button @click="runHydrationDryRun" class="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest shadow-sm hover:bg-slate-50 transition-all flex items-center gap-2">
+                                                            <i data-lucide="refresh-cw" class="w-4 h-4 text-amber-500"></i> Run Hydration Check
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                <div class="grid grid-cols-1 xl:grid-cols-3 gap-8 flex-1 min-h-0">
+                                                    <!-- COLUMN 1: MAPPING QUEUE -->
+                                                    <div class="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 flex flex-col overflow-hidden">
+                                                        <div class="p-6 border-b bg-amber-50 flex justify-between items-center">
+                                                            <h3 class="font-black text-slate-900 text-sm uppercase flex items-center gap-2">
+                                                                <i data-lucide="list-todo" class="w-4 h-4 text-amber-600"></i> Resolution Queue
+                                                            </h3>
+                                                            <span class="bg-amber-200 text-amber-800 text-[10px] font-black px-2 py-0.5 rounded-full">{{ mappingQueue.length }}</span>
+                                                        </div>
+                                                        <div class="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+                                                            <div v-for="item in mappingQueue" :key="item.id" @click="selectedQueueItem = item" :class="selectedQueueItem?.id === item.id ? 'border-emerald-500 ring-4 ring-emerald-500/10 bg-emerald-50' : 'border-slate-100 hover:border-amber-200 hover:bg-amber-50/30'" class="p-4 border-2 rounded-2xl cursor-pointer transition-all">
+                                                                <div class="flex justify-between items-start mb-2">
+                                                                    <span class="text-xs font-black text-slate-900 uppercase tracking-tight">{{ item.rawValue }}</span>
+                                                                    <span class="text-[9px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded uppercase">Seen {{ item.occurrenceCount || 1 }}x</span>
+                                                                </div>
+                                                                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Source: {{ item.context?.source || 'Treez POS' }}</p>
+                                                            </div>
+                                                            <div v-if="mappingQueue.length === 0" class="text-center py-20 text-slate-300">
+                                                                <i data-lucide="check-circle" class="w-12 h-12 mx-auto mb-4 opacity-20"></i>
+                                                                <p class="text-xs font-black uppercase tracking-widest">Queue is Clean</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- COLUMN 2 & 3: WORKBENCH -->
+                                                    <div class="xl:col-span-2 bg-white rounded-[2.5rem] shadow-xl border border-slate-200 flex flex-col overflow-hidden">
+                                                        <div v-if="!selectedQueueItem" class="flex-1 flex flex-col items-center justify-center text-center p-20">
+                                                            <div class="bg-slate-50 w-24 h-24 rounded-[2.5rem] flex items-center justify-center mb-6 shadow-inner">
+                                                                <i data-lucide="fingerprint" class="w-10 h-10 text-slate-200"></i>
+                                                            </div>
+                                                            <h4 class="text-slate-400 font-black uppercase tracking-[0.2em]">Select Entity to Resolve</h4>
+                                                            <p class="text-sm text-slate-300 max-w-xs mt-3 leading-relaxed">Map unresolved Treez brand strings to canonical Sage vendors to enable automated reconciliation and workbook parity.</p>
+                                                        </div>
+
+                                                        <div v-else class="flex-1 flex flex-col">
+                                                            <div class="p-8 border-b bg-slate-50 flex justify-between items-center">
+                                                                <div>
+                                                                    <span class="text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em]">Active Resolution</span>
+                                                                    <h3 class="text-2xl font-black text-slate-900 tracking-tight mt-1">{{ selectedQueueItem.rawValue }}</h3>
+                                                                </div>
+                                                                <button @click="selectedQueueItem = null" class="text-slate-400 hover:text-slate-600 p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
+                                                            </div>
+
+                                                            <div class="p-8 flex-1 overflow-y-auto space-y-10 custom-scrollbar">
+                                                                <!-- STEP 1: SELECT CANONICAL VENDOR -->
+                                                                <div class="space-y-6">
+                                                                    <h4 class="text-xs font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-3">
+                                                                        <span class="bg-slate-900 text-white w-6 h-6 rounded-full flex items-center justify-center text-[10px]">1</span>
+                                                                        Link to Canonical Vendor
+                                                                    </h4>
+                                                                    <div class="relative max-w-md">
+                                                                        <i data-lucide="search" class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                                                                        <input type="text" v-model="vendorSearch" placeholder="Search Master Directory (Sage)..." class="w-full bg-slate-50 border-2 border-slate-100 p-4 pl-12 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all">
+                                                                    </div>
+                                                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                                                                        <button v-for="v in filteredVendors" :key="v.id" @click="selectedVendorForLink = v" :class="selectedVendorForLink?.id === v.id ? 'border-emerald-500 bg-emerald-50 ring-4 ring-emerald-500/5' : 'border-slate-100 hover:border-emerald-200 hover:bg-slate-50'" class="p-4 border-2 rounded-2xl text-left transition-all group">
+                                                                            <p class="text-xs font-black text-slate-900 group-hover:text-emerald-700 transition-colors uppercase tracking-tight">{{ v.canonicalName }}</p>
+                                                                            <p class="text-[10px] text-slate-400 font-mono mt-1">{{ v.sageVendorCode || 'UNASSIGNED_SAGE_ID' }}</p>
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+
+                                                                <!-- STEP 2: CONFIRMATION -->
+                                                                <div v-if="selectedVendorForLink" class="bg-slate-900 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
+                                                                    <div class="absolute top-0 right-0 p-8 opacity-10">
+                                                                        <i data-lucide="link" class="w-32 h-32 text-white"></i>
+                                                                    </div>
+                                                                    <div class="flex items-center gap-6 relative z-10">
+                                                                        <div class="bg-emerald-500 text-white p-4 rounded-3xl shadow-lg">
+                                                                            <i data-lucide="check-circle-2" class="w-8 h-8"></i>
+                                                                        </div>
+                                                                        <div>
+                                                                            <p class="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em]">Proposed Connection</p>
+                                                                            <h4 class="text-xl font-bold text-white mt-1">"{{ selectedQueueItem.rawValue }}" &rarr; {{ selectedVendorForLink.canonicalName }}</h4>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="flex gap-4 mt-8 relative z-10">
+                                                                        <button @click="resolveMapping" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-4 rounded-2xl font-black shadow-xl transition-all uppercase tracking-widest text-xs">Confirm & Bind Identity</button>
+                                                                        <button @click="selectedVendorForLink = null" class="bg-slate-800 text-slate-300 px-8 py-4 rounded-2xl font-bold text-xs hover:bg-slate-700 transition-all uppercase">Cancel</button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- PLACEHOLDER FOR SYSTEM LOGS -->
+                                            <div v-if="currentView === 'LOGS'" class="flex-1 overflow-hidden flex flex-col bg-slate-50">
+                                                <div class="p-8 pb-0 flex justify-between items-end">
+                                                    <div>
+                                                        <h2 class="text-3xl font-black text-slate-900 tracking-tight">System Activity Logs</h2>
+                                                        <p class="text-slate-500 font-medium">Real-time audit trail of all platform operations</p>
+                                                    </div>
+                                                </div>
+                                                <div class="flex-1 p-8 overflow-hidden">
+                                                    <div class="bg-white rounded-[2.5rem] shadow-xl border border-slate-200 flex flex-col overflow-hidden h-full">
+                                                        <div class="flex-1 overflow-auto custom-scrollbar">
+                                                            <table class="hd-grid">
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th>Timestamp</th>
+                                                                        <th>User</th>
+                                                                        <th>Action</th>
+                                                                        <th>Context</th>
+                                                                        <th>Entity</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    <tr v-for="log in systemLogs" :key="log.id">
+                                                                        <td class="text-slate-400 font-mono text-[10px]">{{ new Date(log.timestamp).toLocaleString() }}</td>
+                                                                        <td class="font-bold text-slate-700">{{ log.user }}</td>
+                                                                        <td>
+                                                                            <span :class="{
+                                                                                'bg-emerald-50 text-emerald-700': log.actionType === 'CREATE' || log.actionType === AUDIT_ACTIONS.BRAND_LINKED,
+                                                                                'bg-amber-50 text-amber-700': log.actionType === 'UPDATE',
+                                                                                'bg-red-50 text-red-700': log.actionType === 'DELETE',
+                                                                                'bg-blue-50 text-blue-700': log.actionType === 'IMPORT' || log.actionType === AUDIT_ACTIONS.REPORT_PUBLISHED
+                                                                            }" class="px-2 py-0.5 rounded-[6px] text-[9px] font-black uppercase">
+                                                                                {{ log.actionType }}
+                                                                            </span>
+                                                                        </td>
+                                                                        <td class="max-w-xs truncate text-slate-500">{{ log.details }}</td>
+                                                                        <td class="font-bold text-slate-900">{{ log.entity || '-' }}</td>
+                                                                    </tr>
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+
+
+                </main>
+            </div>
+        </template>
+
         <!-- ROLE SELECTION SCREEN -->
+
         <main v-if="!selectedRole && !isManagerUnlocked && !isBrandUnlocked" class="flex-1 flex flex-col items-center justify-center bg-gray-100 p-4">
             <div class="max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 gap-8">
                 <!-- Employee Option -->
@@ -82,13 +759,14 @@
              </div>
         </main>
 
-                    <div v-if="isBrandUnlocked" class="bg-gray-950 px-6 pt-2 flex gap-2 border-b border-gray-800">
+                                <div v-if="isBrandUnlocked && !currentView?.startsWith('LEGACY_')" class="bg-gray-950 px-6 pt-2 flex gap-2 border-b border-gray-800">
                 <button @click="brandTab = 'Dashboard'" :class="brandTab === 'Dashboard' ? 'bg-gray-100 text-gray-900 font-extrabold' : 'text-gray-400'" class="px-6 py-2 rounded-t-xl text-sm transition-colors">Dashboard</button>
                 <button @click="brandTab = 'Builder'" :class="brandTab === 'Builder' ? 'bg-gray-100 text-gray-900 font-extrabold' : 'text-gray-400'" class="px-6 py-2 rounded-t-xl text-sm transition-colors">Report Builder</button>
                 <button @click="brandTab = 'History'" :class="brandTab === 'History' ? 'bg-gray-100 text-gray-900 font-extrabold' : 'text-gray-400'" class="px-6 py-2 rounded-t-xl text-sm transition-colors">Historical Reports</button>
             </div>
+            
+            <main v-if="isBrandUnlocked && !currentView?.startsWith('LEGACY_')" class="flex-1 overflow-y-auto p-6 bg-gray-100">
 
-            <main v-if="isBrandUnlocked" class="flex-1 overflow-y-auto p-6 bg-gray-100">
                 <!-- SPRINT 8: BRAND IDENTITY & ADMIN SELECTOR -->
                 <div class="max-w-6xl mx-auto mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
                     <div class="bg-white px-6 py-4 rounded-2xl shadow-sm border border-gray-200 flex items-center gap-4 w-full md:w-auto">
@@ -299,21 +977,28 @@
         </template>
 
 
-                <!-- HEADER (Obsidian & Gold) - ONLY FOR EMPLOYEES -->
-        <header v-if="isManagerUnlocked && !isBrandUnlocked" class="bg-gray-950 text-white px-4 md:px-5 py-3 flex flex-col md:flex-row justify-between items-center shrink-0 shadow-lg z-20 gap-3 md:gap-0 border-b border-gray-800">
+                                                        <!-- LEGACY ARCHIVE UI (Encapsulated) -->
+        <template v-if="currentView?.startsWith('LEGACY_')">
+            <!-- HEADER (Obsidian & Gold) - ONLY FOR EMPLOYEES -->
+            <header v-if="isManagerUnlocked && !isBrandUnlocked && currentView?.startsWith('LEGACY_')" class="bg-gray-950 text-white px-4 md:px-5 py-3 flex flex-col md:flex-row justify-between items-center shrink-0 shadow-lg z-20 gap-3 md:gap-0 border-b border-gray-800">
+
+
 
 
             <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
                 <div class="flex items-center gap-3">
-                    <i data-lucide="badge-dollar-sign" class="w-7 h-7 text-amber-500"></i>
+                    <i data-lucide="archive-restore" class="w-7 h-7 text-amber-500"></i>
                     <div>
-                        <h1 class="font-bold tracking-wide text-lg leading-tight text-white">Promo Credit Tracker</h1>
-                        <div class="text-[10px] uppercase font-bold tracking-widest flex items-center gap-2 text-emerald-400">
-                            <span><i data-lucide="cloud" class="w-3 h-3 inline mb-0.5"></i> Cloud Sync Active</span>
+                        <h1 class="font-bold tracking-wide text-lg leading-tight text-white uppercase">Legacy <span class="text-amber-500">Archive</span></h1>
+                        <div class="text-[10px] uppercase font-bold tracking-widest flex items-center gap-2 text-amber-400">
+                            <span><i data-lucide="shield" class="w-3 h-3 inline mb-0.5"></i> Read-Only Mode Authorized</span>
                         </div>
                     </div>
                 </div>
-                <button v-if="isManagerUnlocked" @click="forceLock" class="md:hidden bg-gray-800 hover:bg-gray-700 text-amber-500 p-2 rounded shadow transition-colors"><i data-lucide="lock" class="w-4 h-4"></i></button>
+                <div class="flex items-center gap-2">
+                    <button @click="currentView = 'DASHBOARD'" class="bg-amber-600 text-gray-950 px-4 py-1.5 rounded font-black text-[10px] uppercase tracking-widest shadow-lg hover:bg-amber-500 transition-all">Return to PCRP</button>
+                    <button v-if="isManagerUnlocked" @click="forceLock" class="md:hidden bg-gray-800 hover:bg-gray-700 text-amber-500 p-2 rounded shadow transition-colors"><i data-lucide="lock" class="w-4 h-4"></i></button>
+                </div>
             </div>
 
             <div class="flex items-center bg-gray-900 p-1 rounded-lg shadow-inner w-full sm:w-auto overflow-hidden border border-gray-800" v-if="isManagerUnlocked">
@@ -325,15 +1010,7 @@
                 <div class="flex items-center gap-2 mr-2 bg-gray-900 px-3 py-1.5 rounded shadow-inner border border-gray-800 text-gray-300">
                     <i data-lucide="user" class="w-4 h-4 text-emerald-500"></i> <span class="text-sm font-bold">{{ loggedInUser }}</span>
                 </div>
-                <button v-if="isSuperAdmin" @click="activeTab = 'Logs'" class="bg-gray-800 hover:bg-gray-700 text-amber-500 hover:text-amber-400 px-3 py-1.5 rounded flex items-center gap-1.5 text-sm font-bold shadow transition-colors"><i data-lucide="activity" class="w-4 h-4"></i> Logs</button>
-                <button @click="forceLock" class="bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-amber-500 px-3 py-1.5 rounded flex items-center gap-1.5 text-sm font-bold shadow transition-colors"><i data-lucide="lock" class="w-4 h-4"></i> Lock</button>
-                <button @click="openImportModal" class="bg-gray-800 border border-gray-700 hover:bg-gray-700 text-amber-500 px-3 py-1.5 rounded flex items-center gap-1.5 text-sm font-bold shadow transition-colors"><i data-lucide="grid" class="w-4 h-4"></i> Paste Excel</button>
-                <button @click="openPromoModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded flex items-center gap-1.5 text-sm font-bold shadow transition-colors"><i data-lucide="plus" class="w-4 h-4"></i> New Promo</button>
-            </div>
-            
-            <div class="md:hidden flex w-full gap-2" v-if="isManagerUnlocked">
-                <button @click="openImportModal" class="flex-1 bg-gray-800 border border-gray-700 text-amber-500 px-3 py-2 rounded flex justify-center items-center gap-1.5 text-sm font-bold shadow"><i data-lucide="grid" class="w-4 h-4"></i> Excel</button>
-                <button @click="openPromoModal()" class="flex-1 bg-emerald-600 text-white px-3 py-2 rounded flex justify-center items-center gap-1.5 text-sm font-bold shadow"><i data-lucide="plus" class="w-4 h-4"></i> Promo</button>
+                <button @click="currentView = 'DASHBOARD'" class="bg-gray-800 hover:bg-gray-700 text-amber-500 px-3 py-1.5 rounded flex items-center gap-1.5 text-sm font-bold shadow transition-colors uppercase tracking-widest text-[10px]">Back to PCRP</button>
             </div>
         </header>
 
@@ -341,41 +1018,40 @@
         <!-- Logic moved to selection screens above -->
 
 
-                <!-- APP TABS NAV (Obsidian Background) -->
-        <div v-if="isManagerUnlocked && !isBrandUnlocked" class="bg-gray-950 px-4 md:px-6 pt-2 flex gap-2 shrink-0 z-10 shadow-sm overflow-x-auto no-scrollbar border-b border-gray-800">
+                        <!-- APP TABS NAV (Obsidian Background) -->
+        <div v-if="isManagerUnlocked && !isBrandUnlocked && currentView?.startsWith('LEGACY_')" class="bg-gray-950 px-4 md:px-6 pt-2 flex gap-2 shrink-0 z-10 shadow-sm overflow-x-auto no-scrollbar border-b border-gray-800">
 
-                        <button @click="activeTab = 'Dashboard'" :class="activeTab === 'Dashboard' ? 'bg-gray-100 text-gray-900 font-extrabold border-t-4 border-emerald-500' : 'bg-gray-900/50 text-gray-400 hover:bg-gray-800 hover:text-white'" class="px-6 py-2 rounded-t-xl text-sm transition-colors tracking-wide whitespace-nowrap">Dashboard</button>
-            <button @click="activeTab = 'Intake'" :class="activeTab === 'Intake' ? 'bg-gray-100 text-gray-900 font-extrabold border-t-4 border-amber-500' : 'bg-gray-900/50 text-gray-400 hover:bg-gray-800 hover:text-white'" class="px-6 py-2 rounded-t-xl text-sm transition-colors tracking-wide whitespace-nowrap flex items-center gap-2">
+
+                        <button @click="currentView = 'LEGACY_DASHBOARD'" :class="currentView === 'LEGACY_DASHBOARD' ? 'bg-gray-100 text-gray-900 font-extrabold border-t-4 border-amber-500' : 'bg-gray-900/50 text-gray-400 hover:bg-gray-800 hover:text-white'" class="px-6 py-2 rounded-t-xl text-sm transition-colors tracking-wide whitespace-nowrap">Dashboard</button>
+            <button @click="currentView = 'LEGACY_INTAKE'" :class="currentView === 'LEGACY_INTAKE' ? 'bg-gray-100 text-gray-900 font-extrabold border-t-4 border-amber-500' : 'bg-gray-900/50 text-gray-400 hover:bg-gray-800 hover:text-white'" class="px-6 py-2 rounded-t-xl text-sm transition-colors tracking-wide whitespace-nowrap flex items-center gap-2">
                 Brand Requests 
                 <span v-if="creditRequests.length > 0" class="bg-amber-500 text-gray-950 text-[10px] px-1.5 py-0.5 rounded-full">{{ creditRequests.filter(r => r.statusId === 'SUBMITTED').length }}</span>
             </button>
-            <button @click="activeTab = 'Tracker'" :class="activeTab === 'Tracker' ? 'bg-gray-100 text-gray-900 font-extrabold border-t-4 border-emerald-500' : 'bg-gray-900/50 text-gray-400 hover:bg-gray-800 hover:text-white'" class="px-6 py-2 rounded-t-xl text-sm transition-colors tracking-wide whitespace-nowrap">Main Tracker</button>
+            <button @click="currentView = 'LEGACY_TRACKER'" :class="currentView === 'LEGACY_TRACKER' ? 'bg-gray-100 text-gray-900 font-extrabold border-t-4 border-amber-500' : 'bg-gray-900/50 text-gray-400 hover:bg-gray-800 hover:text-white'" class="px-6 py-2 rounded-t-xl text-sm transition-colors tracking-wide whitespace-nowrap">Main Tracker</button>
 
-            <button @click="activeTab = 'Reports'" :class="activeTab === 'Reports' ? 'bg-gray-100 text-gray-900 font-extrabold border-t-4 border-emerald-500' : 'bg-gray-900/50 text-gray-400 hover:bg-gray-800 hover:text-white'" class="px-6 py-2 rounded-t-xl text-sm transition-colors tracking-wide whitespace-nowrap">Monthly Reports</button>
-            <button @click="activeTab = 'Sales'" :class="activeTab === 'Sales' ? 'bg-gray-100 text-gray-900 font-extrabold border-t-4 border-emerald-500' : 'bg-gray-900/50 text-gray-400 hover:bg-gray-800 hover:text-white'" class="px-6 py-2 rounded-t-xl text-sm transition-colors tracking-wide flex items-center gap-2 whitespace-nowrap">Trees Sales CSV <span v-if="filteredTreesSalesData.length > 0 && activeTab !== 'Sales'" class="bg-amber-500 text-gray-950 text-[10px] px-1.5 py-0.5 rounded-full">{{ filteredTreesSalesData.length }}</span></button>
-            <button @click="activeTab = 'Brands'" :class="activeTab === 'Brands' ? 'bg-gray-100 text-gray-900 font-extrabold border-t-4 border-emerald-500' : 'bg-gray-900/50 text-gray-400 hover:bg-gray-800 hover:text-white'" class="px-6 py-2 rounded-t-xl text-sm transition-colors tracking-wide whitespace-nowrap">Brand Directory</button>
-            <button @click="activeTab = 'Mappings'" :class="activeTab === 'Mappings' ? 'bg-gray-100 text-gray-900 font-extrabold border-t-4 border-amber-500' : 'bg-gray-900/50 text-gray-400 hover:bg-gray-800 hover:text-white'" class="px-6 py-2 rounded-t-xl text-sm transition-colors tracking-wide whitespace-nowrap flex items-center gap-2">
-                Identity Mapping
-                <span v-if="mappingQueueCount > 0" class="bg-amber-500 text-gray-950 text-[10px] px-1.5 py-0.5 rounded-full">{{ mappingQueueCount }}</span>
-            </button>
-            <button v-if="isSuperAdmin" @click="activeTab = 'Logs'" :class="activeTab === 'Logs' ? 'bg-gray-100 text-gray-900 font-extrabold border-t-4 border-amber-500' : 'bg-gray-900/50 text-gray-400 hover:bg-gray-800 hover:text-white'" class="px-6 py-2 rounded-t-xl text-sm transition-colors tracking-wide whitespace-nowrap"><i data-lucide="activity" class="w-3.5 h-3.5 inline mr-1 mb-0.5"></i>System Logs</button>
+            <button @click="currentView = 'LEGACY_REPORTS'" :class="currentView === 'LEGACY_REPORTS' ? 'bg-gray-100 text-gray-900 font-extrabold border-t-4 border-amber-500' : 'bg-gray-900/50 text-gray-400 hover:bg-gray-800 hover:text-white'" class="px-6 py-2 rounded-t-xl text-sm transition-colors tracking-wide whitespace-nowrap">Monthly Reports</button>
+            <button @click="currentView = 'LEGACY_SALES'" :class="currentView === 'LEGACY_SALES' ? 'bg-gray-100 text-gray-900 font-extrabold border-t-4 border-amber-500' : 'bg-gray-900/50 text-gray-400 hover:bg-gray-800 hover:text-white'" class="px-6 py-2 rounded-t-xl text-sm transition-colors tracking-wide flex items-center gap-2 whitespace-nowrap">Trees Sales CSV</button>
+            <button @click="currentView = 'LEGACY_BRANDS'" :class="currentView === 'LEGACY_BRANDS' ? 'bg-gray-100 text-gray-900 font-extrabold border-t-4 border-amber-500' : 'bg-gray-900/50 text-gray-400 hover:bg-gray-800 hover:text-white'" class="px-6 py-2 rounded-t-xl text-sm transition-colors tracking-wide whitespace-nowrap">Brand Directory</button>
         </div>
 
-                <!-- SHARED GLOBAL FILTERS -->
-        <div v-if="isManagerUnlocked && !isBrandUnlocked && activeTab !== 'Logs'" class="bg-gray-100 px-4 md:px-6 pt-4 pb-2 flex flex-col lg:flex-row justify-between items-center shrink-0 gap-3 z-10 border-b border-gray-200">
+                                <div v-if="isManagerUnlocked && !isBrandUnlocked && currentView?.startsWith('LEGACY_') && currentView !== 'LEGACY_LOGS'" class="bg-gray-100 px-4 md:px-6 pt-4 pb-2 flex flex-col lg:flex-row justify-between items-center shrink-0 gap-3 z-10 border-b border-gray-200">
+
+
+
+
 
             <div class="bg-white rounded-xl shadow-sm border border-gray-300 p-1.5 flex overflow-x-auto gap-1 w-full lg:flex-1 no-scrollbar">
-                <button @click="activeMonth = 'All'" :class="activeMonth === 'All' ? 'bg-gray-900 text-emerald-500 font-bold shadow' : 'text-gray-600 hover:bg-gray-100 font-medium'" class="px-4 py-1.5 rounded-lg text-sm transition-all whitespace-nowrap">All Year</button>
+                <button @click="activeMonth = 'All'" :class="activeMonth === 'All' ? 'bg-gray-900 text-amber-500 font-bold shadow' : 'text-gray-600 hover:bg-gray-100 font-medium'" class="px-4 py-1.5 rounded-lg text-sm transition-all whitespace-nowrap">All Year</button>
                 <div class="w-px bg-gray-300 mx-1 shrink-0"></div>
                 <button v-for="month in calendarMonths" :key="month" @click="activeMonth = month" 
-                        :class="activeMonth === month ? 'bg-gray-900 text-emerald-500 font-bold shadow' : 'text-gray-600 hover:bg-gray-100 font-medium'" 
+                        :class="activeMonth === month ? 'bg-gray-900 text-amber-500 font-bold shadow' : 'text-gray-600 hover:bg-gray-100 font-medium'" 
                         class="px-4 py-1.5 rounded-lg text-sm transition-all whitespace-nowrap lg:flex-1 text-center">
                     {{ month }}
                 </button>
             </div>
             <div class="relative w-full lg:w-80 shrink-0">
                 <i data-lucide="search" class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                <input type="text" v-model="searchQueryInput" placeholder="Search brands, types, records..." class="w-full bg-white border border-gray-300 rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-sm transition-shadow">
+                <input type="text" v-model="searchQueryInput" placeholder="Search brands, types, records..." class="w-full bg-white border border-gray-300 rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 shadow-sm transition-shadow">
                 <button v-if="searchQueryInput" @click="searchQueryInput = ''" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                     <i data-lucide="x-circle" class="w-4 h-4"></i>
                 </button>
@@ -383,7 +1059,8 @@
         </div>
 
                 <!-- MONTHLY REPORTS TAB (BROKEN OUT BY BRAND) -->
-        <main v-if="isManagerUnlocked && !isBrandUnlocked && activeTab === 'Reports'" class="flex-1 flex flex-col p-4 md:p-6 bg-gray-100 overflow-y-auto">
+        <main v-if="isManagerUnlocked && !isBrandUnlocked && currentView === 'LEGACY_REPORTS'" class="flex-1 flex flex-col p-4 md:p-6 bg-gray-100 overflow-y-auto">
+
 
             <div class="mb-6">
                 <h2 class="text-xl font-bold text-gray-900">Monthly Brand Reports</h2>
@@ -502,8 +1179,9 @@
             </div>
         </main>
 
-                <!-- DASHBOARD TAB -->
-        <main v-if="isManagerUnlocked && !isBrandUnlocked && activeTab === 'Dashboard'" class="flex-1 flex flex-col p-4 md:p-6 bg-gray-100 overflow-y-auto">
+                                <!-- DASHBOARD TAB -->
+        <main v-if="isManagerUnlocked && !isBrandUnlocked && currentView === 'LEGACY_DASHBOARD'" class="flex-1 flex flex-col p-4 md:p-6 bg-gray-100 overflow-y-auto">
+
 
             <div class="mb-4">
                 <h2 class="text-xl font-bold text-gray-900">Financial Overview</h2>
@@ -538,8 +1216,9 @@
             </div>
         </main>
 
-                <!-- MAIN DASHBOARD TAB (TRACKER) -->
-        <main v-if="isManagerUnlocked && !isBrandUnlocked && activeTab === 'Tracker'" class="flex-1 flex flex-col p-4 md:p-6 pt-4 bg-gray-100 overflow-hidden">
+                                <!-- MAIN DASHBOARD TAB (TRACKER) -->
+        <main v-if="isManagerUnlocked && !isBrandUnlocked && currentView === 'LEGACY_TRACKER'" class="flex-1 flex flex-col p-4 md:p-6 pt-4 bg-gray-100 overflow-hidden">
+
 
             <div class="flex flex-col sm:flex-row gap-4 md:gap-6 mb-4 shrink-0">
                 <div class="bg-white border-l-4 border-amber-500 rounded-xl p-4 md:p-5 flex-1 shadow-sm flex items-center justify-between">
@@ -702,8 +1381,9 @@
             </div>
         </div>
 
-                <!-- TREES SALES REPORTS TAB -->
-        <main v-if="isManagerUnlocked && !isBrandUnlocked && activeTab === 'Sales'" class="flex-1 flex flex-col p-4 md:p-6 pt-4 bg-gray-100 overflow-hidden">
+                                <!-- TREES SALES REPORTS TAB -->
+        <main v-if="isManagerUnlocked && !isBrandUnlocked && currentView === 'LEGACY_SALES'" class="flex-1 flex flex-col p-4 md:p-6 pt-4 bg-gray-100 overflow-hidden">
+
 
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 shrink-0 gap-4">
                 <div>
@@ -773,8 +1453,9 @@
             </div>
         </main>
 
-                <!-- BRAND DIRECTORY TAB -->
-        <main v-if="isManagerUnlocked && !isBrandUnlocked && activeTab === 'Brands'" class="flex-1 flex flex-col p-4 md:p-6 pt-4 bg-gray-100 overflow-hidden">
+                                <!-- BRAND DIRECTORY TAB -->
+        <main v-if="isManagerUnlocked && !isBrandUnlocked && currentView === 'LEGACY_BRANDS'" class="flex-1 flex flex-col p-4 md:p-6 pt-4 bg-gray-100 overflow-hidden">
+
 
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 shrink-0 gap-4">
                 <div>
@@ -856,8 +1537,9 @@
             </div>
         </main>
 
-                <!-- BRAND REQUEST INTAKE TAB (SPRINT 7) -->
-                <main v-if="isManagerUnlocked && !isBrandUnlocked && activeTab === 'Intake'" class="flex-1 flex flex-col p-4 md:p-6 bg-gray-100 overflow-hidden">
+                                <!-- BRAND REQUEST INTAKE TAB (SPRINT 7) -->
+                <main v-if="isManagerUnlocked && !isBrandUnlocked && currentView === 'LEGACY_INTAKE'" class="flex-1 flex flex-col p-4 md:p-6 bg-gray-100 overflow-hidden">
+
                     <div class="mb-6 flex justify-between items-end">
                         <div>
                             <h2 class="text-xl font-black text-gray-900 uppercase">Self-Service Intake Queue</h2>
@@ -927,8 +1609,9 @@
                     </div>
                 </main>
 
-                <!-- IDENTITY MAPPING HUB (PHASE 3) -->
-                <main v-if="isManagerUnlocked && !isBrandUnlocked && activeTab === 'Mappings'" class="flex-1 flex flex-col p-4 md:p-6 bg-gray-100 overflow-hidden">
+                                <!-- IDENTITY MAPPING HUB (PHASE 3) -->
+                <main v-if="isManagerUnlocked && !isBrandUnlocked && currentView === 'LEGACY_MAPPINGS'" class="flex-1 flex flex-col p-4 md:p-6 bg-gray-100 overflow-hidden">
+
                     <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
                         <div>
                             <h2 class="text-xl font-black text-gray-900 uppercase">Identity Mapping Hub</h2>
@@ -1055,8 +1738,9 @@
                     </div>
                 </div>
 
-                <!-- LOGS TAB -->
-            <main v-if="isManagerUnlocked && !isBrandUnlocked && activeTab === 'Logs'" class="flex-1 flex flex-col p-4 md:p-6 bg-gray-100 overflow-hidden">
+                                <!-- LOGS TAB -->
+            <main v-if="isManagerUnlocked && !isBrandUnlocked && currentView === 'LEGACY_LOGS'" class="flex-1 flex flex-col p-4 md:p-6 bg-gray-100 overflow-hidden">
+
                 <div class="mb-4 flex justify-between items-end shrink-0">
                     <div>
                         <h2 class="text-xl font-bold text-gray-900 leading-tight flex items-center gap-2"><i data-lucide="activity" class="w-5 h-5 text-amber-600"></i> System Activity Logs</h2>
@@ -1098,8 +1782,9 @@
                         </tbody>
                     </table>
                 </div>
-            </div>
+                        </div>
         </main>
+        </template>
 
         <!-- ADD/EDIT PROMO MODAL -->
         <div v-if="isManagerUnlocked && showPromoModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-sm p-2" @click.self="closePromoModal">
@@ -1310,3 +1995,4 @@
     <script type="module" src="portal.js?v=3"></script>
 </body>
 </html>
+
