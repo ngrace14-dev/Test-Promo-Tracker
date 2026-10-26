@@ -18,8 +18,8 @@
             <div id="app" class="h-screen flex flex-col bg-gray-100 overflow-hidden" v-cloak data-pcrp-version="4.0.1-activated">
 
         
-                <!-- AUTHENTICATED EMPLOYEE UI -->
-                <template v-if="isManagerUnlocked && !isBrandUnlocked && !currentView?.startsWith('LEGACY_')">
+                                <!-- AUTHENTICATED EMPLOYEE UI -->
+        <template v-if="isManagerUnlocked && !isBrandUnlocked && !currentView?.startsWith('LEGACY_')">
             <!-- GLOBAL HEADER -->
             <header class="bg-white text-slate-900 px-6 py-3 flex justify-between items-center shrink-0 shadow-sm z-30 border-b border-slate-200">
                 <div class="flex items-center gap-6">
@@ -759,13 +759,14 @@
              </div>
         </main>
 
-                    <div v-if="isBrandUnlocked && !legacyMode" class="bg-gray-950 px-6 pt-2 flex gap-2 border-b border-gray-800">
+                                <div v-if="isBrandUnlocked && !currentView?.startsWith('LEGACY_')" class="bg-gray-950 px-6 pt-2 flex gap-2 border-b border-gray-800">
                 <button @click="brandTab = 'Dashboard'" :class="brandTab === 'Dashboard' ? 'bg-gray-100 text-gray-900 font-extrabold' : 'text-gray-400'" class="px-6 py-2 rounded-t-xl text-sm transition-colors">Dashboard</button>
                 <button @click="brandTab = 'Builder'" :class="brandTab === 'Builder' ? 'bg-gray-100 text-gray-900 font-extrabold' : 'text-gray-400'" class="px-6 py-2 rounded-t-xl text-sm transition-colors">Report Builder</button>
                 <button @click="brandTab = 'History'" :class="brandTab === 'History' ? 'bg-gray-100 text-gray-900 font-extrabold' : 'text-gray-400'" class="px-6 py-2 rounded-t-xl text-sm transition-colors">Historical Reports</button>
             </div>
-
+            
             <main v-if="isBrandUnlocked && !currentView?.startsWith('LEGACY_')" class="flex-1 overflow-y-auto p-6 bg-gray-100">
+
                 <!-- SPRINT 8: BRAND IDENTITY & ADMIN SELECTOR -->
                 <div class="max-w-6xl mx-auto mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
                     <div class="bg-white px-6 py-4 rounded-2xl shadow-sm border border-gray-200 flex items-center gap-4 w-full md:w-auto">
@@ -976,10 +977,11 @@
         </template>
 
 
-                                                <!-- LEGACY ARCHIVE UI (Encapsulated) -->
+                                                        <!-- LEGACY ARCHIVE UI (Encapsulated) -->
         <template v-if="currentView?.startsWith('LEGACY_')">
             <!-- HEADER (Obsidian & Gold) - ONLY FOR EMPLOYEES -->
-            <header v-if="isManagerUnlocked && !isBrandUnlocked" class="bg-gray-950 text-white px-4 md:px-5 py-3 flex flex-col md:flex-row justify-between items-center shrink-0 shadow-lg z-20 gap-3 md:gap-0 border-b border-gray-800">
+            <header v-if="isManagerUnlocked && !isBrandUnlocked && currentView?.startsWith('LEGACY_')" class="bg-gray-950 text-white px-4 md:px-5 py-3 flex flex-col md:flex-row justify-between items-center shrink-0 shadow-lg z-20 gap-3 md:gap-0 border-b border-gray-800">
+
 
 
 
@@ -1016,8 +1018,9 @@
         <!-- Logic moved to selection screens above -->
 
 
-                <!-- APP TABS NAV (Obsidian Background) -->
-        <div v-if="isManagerUnlocked && !isBrandUnlocked" class="bg-gray-950 px-4 md:px-6 pt-2 flex gap-2 shrink-0 z-10 shadow-sm overflow-x-auto no-scrollbar border-b border-gray-800">
+                        <!-- APP TABS NAV (Obsidian Background) -->
+        <div v-if="isManagerUnlocked && !isBrandUnlocked && currentView?.startsWith('LEGACY_')" class="bg-gray-950 px-4 md:px-6 pt-2 flex gap-2 shrink-0 z-10 shadow-sm overflow-x-auto no-scrollbar border-b border-gray-800">
+
 
                         <button @click="currentView = 'LEGACY_DASHBOARD'" :class="currentView === 'LEGACY_DASHBOARD' ? 'bg-gray-100 text-gray-900 font-extrabold border-t-4 border-amber-500' : 'bg-gray-900/50 text-gray-400 hover:bg-gray-800 hover:text-white'" class="px-6 py-2 rounded-t-xl text-sm transition-colors tracking-wide whitespace-nowrap">Dashboard</button>
             <button @click="currentView = 'LEGACY_INTAKE'" :class="currentView === 'LEGACY_INTAKE' ? 'bg-gray-100 text-gray-900 font-extrabold border-t-4 border-amber-500' : 'bg-gray-900/50 text-gray-400 hover:bg-gray-800 hover:text-white'" class="px-6 py-2 rounded-t-xl text-sm transition-colors tracking-wide whitespace-nowrap flex items-center gap-2">
@@ -1031,8 +1034,9 @@
             <button @click="currentView = 'LEGACY_BRANDS'" :class="currentView === 'LEGACY_BRANDS' ? 'bg-gray-100 text-gray-900 font-extrabold border-t-4 border-amber-500' : 'bg-gray-900/50 text-gray-400 hover:bg-gray-800 hover:text-white'" class="px-6 py-2 rounded-t-xl text-sm transition-colors tracking-wide whitespace-nowrap">Brand Directory</button>
         </div>
 
-                                <!-- SHARED GLOBAL FILTERS -->
-        <div v-if="isManagerUnlocked && !isBrandUnlocked && currentView?.startsWith('LEGACY_') && currentView !== 'LEGACY_LOGS'" class="bg-gray-100 px-4 md:px-6 pt-4 pb-2 flex flex-col lg:flex-row justify-between items-center shrink-0 gap-3 z-10 border-b border-gray-200">
+                                <div v-if="isManagerUnlocked && !isBrandUnlocked && currentView?.startsWith('LEGACY_') && currentView !== 'LEGACY_LOGS'" class="bg-gray-100 px-4 md:px-6 pt-4 pb-2 flex flex-col lg:flex-row justify-between items-center shrink-0 gap-3 z-10 border-b border-gray-200">
+
+
 
 
 

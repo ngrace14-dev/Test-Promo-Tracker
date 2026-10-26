@@ -178,7 +178,7 @@ createApp({
         });
 
                 const activeSite = ref('Red Bluff');
-        const activeTab = ref('Tracker');
+                const currentView = ref('DASHBOARD');
         const discoveryTab = ref('CLAIMS'); // Phase 6D
 
         const systemUsers = {
@@ -673,14 +673,14 @@ createApp({
             });
         };
 
-                watch([activeTab, currentView], ([newTab, newView]) => {
-            if (newTab === 'Dashboard' || newView === 'LEGACY_DASHBOARD') {
+                        watch(currentView, (newView) => {
+            if (newView === 'DASHBOARD' || newView === 'LEGACY_DASHBOARD') {
                 nextTick(() => { drawCharts(); });
             }
         });
 
         watch(promoCredits, () => {
-            if (activeTab.value === 'Dashboard') { drawCharts(); }
+            if (currentView.value === 'DASHBOARD' || currentView.value === 'LEGACY_DASHBOARD') { drawCharts(); }
         }, { deep: true });
 
         const groupedPendingReports = computed(() => {
@@ -994,12 +994,13 @@ createApp({
                 const userEmail = user.email.toLowerCase();
                 const managerData = systemUsers[userEmail];
 
-                if (managerData && managerData.active) {
+                                if (managerData && managerData.active) {
                     // Only unlock Manager view if we aren't currently in a Brand Portal session
                     if (!isBrandUnlocked.value) {
                         loggedInUser.value = managerData.name;
                         activeSite.value = managerData.access[0];
                         isManagerUnlocked.value = true;
+                        currentView.value = 'DASHBOARD';
                     }
 
                     isSuperAdmin.value = managerData.superAdmin || false;
@@ -1721,10 +1722,10 @@ createApp({
                 }
                 logSystemAction("UPDATE", `Synced and aggregated ${creditsCreated} vendor credits`);
                 alert(`Success! Aggregated ${creditsCreated} vendor credits and pushed them to Firebase.`);
-                                currentView.value = 'LEGACY_TRACKER'; 
+                                currentView.value = 'DISCOVERY'; 
             } catch (err) { 
-                console.error(err);
-                alert("Failed to sync aggregated credits to the cloud."); 
+                                console.error(err);
+                                alert("Failed to sync aggregated credits to the cloud."); 
             }
         };
 
@@ -2140,12 +2141,12 @@ createApp({
                     refreshIcons();
                 });
 
-                return {
+                                return {
                     selectedRole, isManagerUnlocked, isBrandUnlocked, isPreviewMode, activeBrand, brandTab, 
                     loggedInUser, emailInput, passwordInput, authError, 
                     brandEmailInput, brandCodeInput, brandAuthError,
                     isSuperAdmin,
-                    activeSite, activeTab,
+                    activeSite,
                     treesSalesData, masterBrands, selectedBrands, allBrandsSelected, toggleAllBrands,
 
             deleteSelectedBrands, updateBrandField, toggleBrandActive, promoCredits, calendarMonths, activeMonth,
