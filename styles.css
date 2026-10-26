@@ -1,9 +1,9 @@
-/* Financial Control Center Styles */
+/* Financial Control Center Styles - Light Theme */
 :root {
     --obsidian: #0f172a;
     --emerald-primary: #10b981;
     --amber-primary: #f59e0b;
-    --workspace-bg: #f8fafc;
+    --workspace-bg: #f1f5f9;
 }
 
 body { 
@@ -17,15 +17,15 @@ body {
     overflow: hidden; 
 }
 
-/* Sidebar Accordion */
+/* Sidebar Accordion - Light */
 .sidebar-link {
     @apply flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-semibold;
 }
 .sidebar-link-active {
-    @apply bg-emerald-500/10 text-emerald-400 border-l-4 border-emerald-500 rounded-l-none;
+    @apply bg-emerald-50 text-emerald-600 border-l-4 border-emerald-500 rounded-l-none;
 }
 .sidebar-link-inactive {
-    @apply text-slate-400 hover:bg-slate-800 hover:text-white;
+    @apply text-slate-500 hover:bg-slate-50 hover:text-slate-900;
 }
 
 /* High-Density Grid (Excel Inspired) */
@@ -42,20 +42,15 @@ body {
     @apply bg-slate-50/80;
 }
 
-/* Scrollbar Sizing */
-.custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
-.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-
 /* Status Ticker */
 .ticker-item {
-    @apply flex flex-col border-r border-slate-800 px-4 last:border-0;
+    @apply flex flex-col border-r border-slate-200 px-4 last:border-0;
 }
 .ticker-label {
-    @apply text-[9px] font-black text-slate-500 uppercase tracking-widest;
+    @apply text-[9px] font-black text-slate-400 uppercase tracking-widest;
 }
 .ticker-value {
-    @apply text-xs font-bold text-slate-200;
+    @apply text-xs font-bold text-slate-900;
 }
+
 
