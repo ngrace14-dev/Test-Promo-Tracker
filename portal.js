@@ -10,6 +10,8 @@ import { PROMO_HIERARCHY, STATUS_DEFINITIONS, AUDIT_ACTIONS } from "./governance
 
 import { IdentityService } from "./services/IdentityService.js";
 import { HydrationService } from "./services/HydrationService.js";
+import { QueueService, QUEUE_ACTION_TYPES } from "./services/QueueService.js";
+
 
 
 
@@ -44,129 +46,9 @@ const storage = getStorage(firebaseApp);
 const { createApp, ref, computed, nextTick, onMounted, watch } = window.Vue;
 
 createApp({
-        setup() {
-            const selectedRole = ref(null); // 'Employee' or 'Brand'
-            const isManagerUnlocked = ref(false);
-                        const isBrandUnlocked = ref(false);
-            const isPreviewMode = ref(false);
-            const activeBrand = ref(null);
-            const brandTab = ref('Dashboard');
-
-            // PHASE 3: IDENTITY MAPPING STATE
-            const identityService = new IdentityService(db, logSystemAction);
-            const hydrationService = new HydrationService(db, identityService, logSystemAction);
-            
-            const mappingQueue = ref([]);
-            const selectedQueueItem = ref(null);
-            const vendorMappings = ref([]);
-            const siteMappings = ref([]);
-            const vendorSearch = ref('');
-            const selectedVendorForLink = ref(null);
-            const showVendorModal = ref(false);
-            const vendorForm = ref({ canonicalName: '', sageVendorCode: '', outreachEmail: '' });
-
-            const mappingQueueCount = computed(() => mappingQueue.value.length);
-            const filteredVendors = computed(() => {
-                const q = vendorSearch.value.toLowerCase();
-                return vendorMappings.value.filter(v => v.canonicalName.toLowerCase().includes(q) || (v.sageVendorCode || '').toLowerCase().includes(q));
-            });
-
-            const resolveMapping = async () => {
-                if (!selectedQueueItem.value || !selectedVendorForLink.value) return;
-                
-                try {
-                    const batch = writeBatch(db);
-                    
-                    // 1. Create brandMapping
-                    const brandRef = doc(collection(db, "brandMappings"));
-                    batch.set(brandRef, {
-                        brandName: selectedQueueItem.value.rawValue,
-                        vendorId: selectedVendorForLink.value.id,
-                        confidence: 'HIGH',
-                        mappedAt: Date.now(),
-                        mappedBy: loggedInUser.value
-                    });
-
-                    // 2. Mark queue item as RESOLVED
-                    const queueRef = doc(db, "mappingQueue", selectedQueueItem.value.id);
-                    batch.update(queueRef, { status: 'RESOLVED', resolvedAt: Date.now() });
-
-                    await batch.commit();
-                    
-                    await logSystemAction(AUDIT_ACTIONS.BRAND_LINKED, `Linked "${selectedQueueItem.value.rawValue}" to ${selectedVendorForLink.value.canonicalName}`);
-                    
-                    selectedQueueItem.value = null;
-                    selectedVendorForLink.value = null;
-                    alert("Identity mapping resolved successfully!");
-                } catch (error) {
-                    console.error("Resolution Error:", error);
-                    alert("Failed to resolve mapping.");
-                }
-            };
-
-            const saveCanonicalVendor = async () => {
-                if (!vendorForm.value.canonicalName) return alert("Vendor Name is required.");
-                try {
-                    const docRef = await addDoc(collection(db, "vendorMappings"), {
-                        ...vendorForm.value,
-                        createdAt: Date.now(),
-                        status: 'ACTIVE'
-                    });
-                    await logSystemAction(AUDIT_ACTIONS.VENDOR_MAPPED, `Created canonical vendor: ${vendorForm.value.canonicalName}`);
-                    vendorForm.value = { canonicalName: '', sageVendorCode: '', outreachEmail: '' };
-                    showVendorModal.value = false;
-                } catch (error) {
-                    alert("Failed to create vendor.");
-                }
-            };
-
-            const runHydrationDryRun = async () => {
-                if (!confirm("Run a legacy hydration dry-run? This will scan your credits and report on mapping status without changing data.")) return;
-                try {
-                    const report = await hydrationService.hydrateLegacyCredits(true);
-                    console.log("Hydration Dry Run Report:", report);
-                    alert(`Dry Run Complete!\nProcessed: ${report.totalProcessed}\nResolved: ${report.successfullyHydrated}\nNeeds Mapping: ${report.needsMapping}`);
-                } catch (error) {
-                    alert("Hydration check failed.");
-                }
-            };
-
-
-
-
-                        const publishedReports = ref([]); // Sprint 2: Track published reports
-            const creditRequests = ref([]); // Sprint 7: New Brand Requests
-            const isLogsMinimized = ref(false); // SPRINT 7 Fix
-
-
-
-        
+    setup() {
+        // --- 1. CORE UTILITIES (Hoisted for initialization safety) ---
         const loggedInUser = ref('');
-        const emailInput = ref('');
-        const passwordInput = ref('');
-        const authError = ref('');
-
-        const brandEmailInput = ref('');
-        const brandCodeInput = ref('');
-                const brandAuthError = ref('');
-        
-        const brandFilters = ref({
-            month: 'All',
-            site: 'All',
-            status: 'All',
-            search: ''
-        });
-
-        const activeSite = ref('Red Bluff');
-        const activeTab = ref('Tracker');
-        
-        const systemUsers = {
-            'lenay@rredco.com': { name: 'Lenay A.', access: ['Red Bluff', 'Redding'], active: false },
-            'tricia@rredco.com': { name: 'Tricia K.', access: ['Red Bluff', 'Redding'], active: false },
-            'whitney@rredco.com': { name: 'Whitney M.', access: ['Red Bluff', 'Redding'], active: false },
-            'nicholas.grace@rredco.com': { name: 'Nicholas G.', access: ['Red Bluff', 'Redding'], active: true, superAdmin: true },
-            'accounting@rredco.com': { name: 'Accounting Team', access: ['Red Bluff', 'Redding'], active: true, superAdmin: true }
-        };
 
         const logSystemAction = async (actionType, details) => {
             try {
@@ -181,11 +63,139 @@ createApp({
             }
         };
 
+        const formatCurrency = (val) => {
+            const num = parseFloat(val);
+            if (isNaN(num)) return '$0.00';
+            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
+        };
+
+                // --- 2. SERVICES ---
+        const identityService = new IdentityService(db, logSystemAction);
+        const hydrationService = new HydrationService(db, identityService, logSystemAction);
+        const queueService = new QueueService(db, logSystemAction);
+
+
+        // --- 3. REACTIVE STATE ---
+        const selectedRole = ref(null); // 'Employee' or 'Brand'
+        const isManagerUnlocked = ref(false);
+        const isBrandUnlocked = ref(false);
+        const isPreviewMode = ref(false);
+        const activeBrand = ref(null);
+        const brandTab = ref('Dashboard');
+        
+        const mappingQueue = ref([]);
+        const selectedQueueItem = ref(null);
+        const vendorMappings = ref([]);
+        const siteMappings = ref([]);
+        const vendorSearch = ref('');
+        const selectedVendorForLink = ref(null);
+        const showVendorModal = ref(false);
+        const vendorForm = ref({ canonicalName: '', sageVendorCode: '', outreachEmail: '' });
+
+        const mappingQueueCount = computed(() => mappingQueue.value.length);
+        const filteredVendors = computed(() => {
+            const q = vendorSearch.value.toLowerCase();
+            return vendorMappings.value.filter(v => v.canonicalName.toLowerCase().includes(q) || (v.sageVendorCode || '').toLowerCase().includes(q));
+        });
+
+        const resolveMapping = async () => {
+            if (!selectedQueueItem.value || !selectedVendorForLink.value) return;
+            
+            try {
+                const batch = writeBatch(db);
+                
+                // 1. Create brandMapping
+                const brandRef = doc(collection(db, "brandMappings"));
+                batch.set(brandRef, {
+                    brandName: selectedQueueItem.value.rawValue,
+                    vendorId: selectedVendorForLink.value.id,
+                    confidence: 'HIGH',
+                    mappedAt: Date.now(),
+                    mappedBy: loggedInUser.value
+                });
+
+                // 2. Mark queue item as RESOLVED
+                const queueRef = doc(db, "mappingQueue", selectedQueueItem.value.id);
+                batch.update(queueRef, { status: 'RESOLVED', resolvedAt: Date.now() });
+
+                await batch.commit();
+                
+                await logSystemAction(AUDIT_ACTIONS.BRAND_LINKED, `Linked "${selectedQueueItem.value.rawValue}" to ${selectedVendorForLink.value.canonicalName}`);
+                
+                selectedQueueItem.value = null;
+                selectedVendorForLink.value = null;
+                alert("Identity mapping resolved successfully!");
+            } catch (error) {
+                console.error("Resolution Error:", error);
+                alert("Failed to resolve mapping.");
+            }
+        };
+
+        const saveCanonicalVendor = async () => {
+            if (!vendorForm.value.canonicalName) return alert("Vendor Name is required.");
+            try {
+                const docRef = await addDoc(collection(db, "vendorMappings"), {
+                    ...vendorForm.value,
+                    createdAt: Date.now(),
+                    status: 'ACTIVE'
+                });
+                await logSystemAction(AUDIT_ACTIONS.VENDOR_MAPPED, `Created canonical vendor: ${vendorForm.value.canonicalName}`);
+                vendorForm.value = { canonicalName: '', sageVendorCode: '', outreachEmail: '' };
+                showVendorModal.value = false;
+            } catch (error) {
+                alert("Failed to create vendor.");
+            }
+        };
+
+        const runHydrationDryRun = async () => {
+            if (!confirm("Run a legacy hydration dry-run? This will scan your credits and report on mapping status without changing data.")) return;
+            try {
+                const report = await hydrationService.hydrateLegacyCredits(true);
+                console.log("Hydration Dry Run Report:", report);
+                alert(`Dry Run Complete!\nProcessed: ${report.totalProcessed}\nResolved: ${report.successfullyHydrated}\nNeeds Mapping: ${report.needsMapping}`);
+            } catch (error) {
+                alert("Hydration check failed.");
+            }
+        };
+
+        const publishedReports = ref([]); // Sprint 2: Track published reports
+        const creditRequests = ref([]); // Sprint 7: New Brand Requests
+        const isLogsMinimized = ref(false); // SPRINT 7 Fix
+        
+        const emailInput = ref('');
+        const passwordInput = ref('');
+        const authError = ref('');
+
+        const brandEmailInput = ref('');
+        const brandCodeInput = ref('');
+        const brandAuthError = ref('');
+        
+        const brandFilters = ref({
+            month: 'All',
+            site: 'All',
+            status: 'All',
+            search: ''
+        });
+
+        const activeSite = ref('Red Bluff');
+        const activeTab = ref('Tracker');
+
+        const systemUsers = {
+            'lenay@rredco.com': { name: 'Lenay A.', access: ['Red Bluff', 'Redding'], active: false },
+            'tricia@rredco.com': { name: 'Tricia K.', access: ['Red Bluff', 'Redding'], active: false },
+            'whitney@rredco.com': { name: 'Whitney M.', access: ['Red Bluff', 'Redding'], active: false },
+            'nicholas.grace@rredco.com': { name: 'Nicholas G.', access: ['Red Bluff', 'Redding'], active: true, superAdmin: true },
+            'accounting@rredco.com': { name: 'Accounting Team', access: ['Red Bluff', 'Redding'], active: true, superAdmin: true }
+        };
+
+        const isSuperAdmin = ref(false);
+
         const treesSalesData = ref(JSON.parse(localStorage.getItem('treesSalesData')) || []);
         
         const saveTreesDataLocal = () => {
             localStorage.setItem('treesSalesData', JSON.stringify(treesSalesData.value));
         };
+
 
         const masterBrands = ref([]);
         const selectedBrands = ref([]);
