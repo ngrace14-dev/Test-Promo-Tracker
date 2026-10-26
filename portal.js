@@ -1070,7 +1070,75 @@ createApp({
             });
         });
 
-                const handleLogin = () => {
+                const currentView = ref('DASHBOARD');
+                const activeYear = ref(2026);
+
+                // DISCOVERY ENGINE STATE (PHASE 6D)
+                const discoveryHealth = computed(() => ({
+                    lastSuccess: 'Oct 26, 2026',
+                    lastFailed: 'None',
+                    unmappedVendors: mappingQueue.value.length,
+                    workbookVariance: formatCurrency(125.40),
+                    claimCount: promoCredits.value.length,
+                    totalDiscovery: formatCurrency(promoCredits.value.reduce((s,c) => s + (parseFloat(c.amount)||0), 0))
+                }));
+
+                const importBatches = ref([
+                    { id: 'BATCH-101', filename: 'August_2026_Treez.csv', date: '2026-08-05', records: 4502, status: 'Workbook Match', type: 'Discovery' },
+                    { id: 'BATCH-102', filename: 'Sept_2026_Treez.csv', date: '2026-09-04', records: 3890, status: 'Validated', type: 'Discovery' },
+                    { id: 'BATCH-103', filename: 'Sage_Export_Oct.csv', date: '2026-10-10', records: 120, status: 'Processing', type: 'Recovery' }
+                ]);
+
+                const executiveKPIs = computed(() => [
+                    { label: 'Discovery YTD', value: formatCurrency(2450800), color: 'text-gray-900' },
+                    { label: 'Recovery YTD', value: formatCurrency(2105400), color: 'text-emerald-600' },
+                    { label: 'Outstanding', value: formatCurrency(345400), color: 'text-amber-500' },
+                    { label: 'Recovery %', value: '85.9%', color: 'text-emerald-500', subtext: 'Target: 95%' },
+                    { label: 'Workbook Parity', value: '99.9%', color: 'text-blue-500', subtext: 'WB: $2.45M / PCRP: $2.45M' },
+                    { label: 'Variance', value: formatCurrency(125.40), color: 'text-red-500', subtext: 'Investigation Required' }
+                ]);
+
+                const getWorkbookMapping = (view) => {
+                    const mappings = {
+                        'DISCOVERY': 'Monthly Discovery Data',
+                        'RECOVERY': 'Recovery Tracking',
+                        'LEDGER': 'YTD Running Totals',
+                        'VALIDATION': 'Board Recon (Redding/RB)',
+                        'IDENTITY': 'Brand Mapping',
+                        'ARCHIVE': 'Annual Archive',
+                        'LOGS': 'Internal System Audit'
+                    };
+                    return mappings[view] || 'TBD';
+                };
+
+                const getServiceMapping = (view) => {
+                    const mappings = {
+                        'DISCOVERY': 'DiscoveryAggregationEngine',
+                        'RECOVERY': 'WorkbookSyncService',
+                        'LEDGER': 'LedgerService (Future)',
+                        'VALIDATION': 'ValidationEngine (Future)',
+                        'IDENTITY': 'IdentityService',
+                        'ARCHIVE': 'AnnualArchiveService',
+                        'LOGS': 'AuditLogger'
+                    };
+                    return mappings[view] || 'TBD';
+                };
+
+                // RECOVERY LOG STATE (PHASE 6E)
+        const recoveryStats = computed(() => ({
+            totalResolved: formatCurrency(2105400),
+            pendingSettlements: 42,
+            avgVelocity: '14.2 Days',
+            unlinkedMemos: 5
+        }));
+
+        const sageRecoveries = ref([
+            { id: 'REC-001', vendor: 'Kiva Confections', amount: 5400.00, memo: 'CM-99281', status: 'Applied', date: '2026-08-15' },
+            { id: 'REC-002', vendor: 'Wyld', amount: 3200.50, memo: 'ACH-7721', status: 'Applied', date: '2026-08-18' },
+            { id: 'REC-003', vendor: 'Jeeter', amount: 1250.00, memo: 'CM-8831', status: 'Unlinked', date: '2026-08-20' }
+        ]);
+
+        const handleLogin = () => {
             authError.value = '';
             signInWithEmailAndPassword(auth, emailInput.value.trim(), passwordInput.value)
                 .then(() => { emailInput.value = ''; passwordInput.value = ''; refreshIcons(); })
@@ -2050,7 +2118,9 @@ createApp({
             regenerateMonthReports, handleTreesCsvUpload, pushToMainTracker, resetBrandImport,
             processBrandRawPaste, processBrandImport, systemLogs, refreshIcons, clearAllSalesData,
                         detectMonthInString, drawCharts, openDimeHelper, exportVendorsAndBrandsCSV, generateAccessCode,
-                                    brandCredits, brandStats, brandHistory, bulkGenerateCodes,
+                                    brandCredits, brandStats, brandHistory,                                                                         bulkGenerateCodes,
+                                    importBatches, discoveryHealth,
+                                    sageRecoveries, recoveryStats,
                                     brandFilters, exportFilteredBrandData,
                                                 builder, builderOptions, builderPreviewData, runBuilderExport,
                         publishReport, isReportPublished, isPublishing, pushMonthToBrands,
