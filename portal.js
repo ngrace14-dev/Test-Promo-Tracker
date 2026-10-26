@@ -673,8 +673,8 @@ createApp({
             });
         };
 
-        watch(activeTab, (newTab) => {
-            if (newTab === 'Dashboard') {
+                watch([activeTab, currentView], ([newTab, newView]) => {
+            if (newTab === 'Dashboard' || newView === 'LEGACY_DASHBOARD') {
                 nextTick(() => { drawCharts(); });
             }
         });
@@ -1071,8 +1071,7 @@ createApp({
             });
         });
 
-                                const currentView = ref('DASHBOARD');
-        const legacyMode = ref(false);
+                                                                const currentView = ref('DASHBOARD');
         const activeYear = ref(2026);
         const sidebarExpanded = ref({
             DISCOVERY: true,
@@ -1086,7 +1085,6 @@ createApp({
         // FORCE RENDER PRIORITY (STAGE 1)
         onMounted(() => {
             currentView.value = 'DASHBOARD';
-            legacyMode.value = false;
             refreshIcons();
         });
 
@@ -1165,9 +1163,6 @@ createApp({
             return mappings[view] || 'TBD';
         };
 
-        const handleLogin = () => {
-
-
                 // RECOVERY LOG STATE (PHASE 6E)
         const recoveryStats = computed(() => ({
             totalResolved: formatCurrency(2105400),
@@ -1182,10 +1177,15 @@ createApp({
             { id: 'REC-003', vendor: 'Jeeter', amount: 1250.00, memo: 'CM-8831', status: 'Unlinked', date: '2026-08-20' }
         ]);
 
-        const handleLogin = () => {
+                const handleLogin = () => {
             authError.value = '';
             signInWithEmailAndPassword(auth, emailInput.value.trim(), passwordInput.value)
-                .then(() => { emailInput.value = ''; passwordInput.value = ''; refreshIcons(); })
+                .then(() => { 
+                    emailInput.value = ''; 
+                    passwordInput.value = ''; 
+                    currentView.value = 'DASHBOARD';
+                    refreshIcons(); 
+                })
                 .catch((error) => { authError.value = "Invalid email or password."; });
         };
 
@@ -1721,7 +1721,7 @@ createApp({
                 }
                 logSystemAction("UPDATE", `Synced and aggregated ${creditsCreated} vendor credits`);
                 alert(`Success! Aggregated ${creditsCreated} vendor credits and pushed them to Firebase.`);
-                activeTab.value = 'Tracker'; 
+                                currentView.value = 'LEGACY_TRACKER'; 
             } catch (err) { 
                 console.error(err);
                 alert("Failed to sync aggregated credits to the cloud."); 
