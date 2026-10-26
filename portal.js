@@ -177,8 +177,9 @@ createApp({
             search: ''
         });
 
-        const activeSite = ref('Red Bluff');
+                const activeSite = ref('Red Bluff');
         const activeTab = ref('Tracker');
+        const discoveryTab = ref('CLAIMS'); // Phase 6D
 
         const systemUsers = {
             'lenay@rredco.com': { name: 'Lenay A.', access: ['Red Bluff', 'Redding'], active: false },
@@ -2167,11 +2168,11 @@ createApp({
                                     currentView, sidebarExpanded, toggleGroup,
                                     activeYear, activeMonth, activeSite,
                                     mockAging, calibrationStats,
-                                    brandFilters, exportFilteredBrandData,
+                                                                        brandFilters, exportFilteredBrandData,
                                                 builder, builderOptions, builderPreviewData, runBuilderExport,
                         publishReport, isReportPublished, isPublishing, pushMonthToBrands,
 
-
+                        discoveryTab, // Phase 6D
 
                                                 creditRequests, updateRequestStatus, reconcileRequest, getStatusDisplayName, getStatusColor,
                         STATUS_DEFINITIONS, isLogsMinimized,
