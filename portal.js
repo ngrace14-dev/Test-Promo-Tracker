@@ -75,13 +75,15 @@ createApp({
         const queueService = new QueueService(db, logSystemAction);
 
 
-        // --- 3. REACTIVE STATE ---
+                // --- 3. REACTIVE STATE ---
         const selectedRole = ref(null); // 'Employee' or 'Brand'
         const isManagerUnlocked = ref(false);
         const isBrandUnlocked = ref(false);
         const isPreviewMode = ref(false);
         const activeBrand = ref(null);
         const brandTab = ref('Dashboard');
+        const activeSite = ref('Red Bluff');
+        const currentView = ref('DASHBOARD');
         
         const mappingQueue = ref([]);
         const selectedQueueItem = ref(null);
@@ -177,8 +179,6 @@ createApp({
             search: ''
         });
 
-                const activeSite = ref('Red Bluff');
-                const currentView = ref('DASHBOARD');
         const discoveryTab = ref('CLAIMS'); // Phase 6D
 
         const systemUsers = {
@@ -994,13 +994,12 @@ createApp({
                 const userEmail = user.email.toLowerCase();
                 const managerData = systemUsers[userEmail];
 
-                                if (managerData && managerData.active) {
+                                                if (managerData && managerData.active) {
                     // Only unlock Manager view if we aren't currently in a Brand Portal session
                     if (!isBrandUnlocked.value) {
                         loggedInUser.value = managerData.name;
                         activeSite.value = managerData.access[0];
                         isManagerUnlocked.value = true;
-                        currentView.value = 'DASHBOARD';
                     }
 
                     isSuperAdmin.value = managerData.superAdmin || false;
@@ -1072,8 +1071,7 @@ createApp({
             });
         });
 
-                                                                const currentView = ref('DASHBOARD');
-        const activeYear = ref(2026);
+                                                                                const activeYear = ref(2026);
         const sidebarExpanded = ref({
             DISCOVERY: true,
             RECOVERY: false,
@@ -1092,8 +1090,6 @@ createApp({
         const toggleGroup = (group) => {
             sidebarExpanded.value[group] = !sidebarExpanded.value[group];
         };
-
-        const activeSite = ref('Combined');
 
         // MOCK DATA FOR SHELLS
         const mockAging = [
@@ -1164,7 +1160,7 @@ createApp({
             return mappings[view] || 'TBD';
         };
 
-                // RECOVERY LOG STATE (PHASE 6E)
+        // RECOVERY LOG STATE (PHASE 6E)
         const recoveryStats = computed(() => ({
             totalResolved: formatCurrency(2105400),
             pendingSettlements: 42,
@@ -1178,7 +1174,7 @@ createApp({
             { id: 'REC-003', vendor: 'Jeeter', amount: 1250.00, memo: 'CM-8831', status: 'Unlinked', date: '2026-08-20' }
         ]);
 
-                const handleLogin = () => {
+        const handleLogin = () => {
             authError.value = '';
             signInWithEmailAndPassword(auth, emailInput.value.trim(), passwordInput.value)
                 .then(() => { 
