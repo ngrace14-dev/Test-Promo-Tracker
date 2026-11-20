@@ -11,6 +11,7 @@ import { PROMO_HIERARCHY, STATUS_DEFINITIONS, AUDIT_ACTIONS } from "./governance
 import { IdentityService } from "./services/IdentityService.js";
 import { HydrationService } from "./services/HydrationService.js";
 import { QueueService, QUEUE_ACTION_TYPES } from "./services/QueueService.js";
+import { LighthouseEngine } from "./services/LighthouseEngine.js";
 
 
 
@@ -73,6 +74,32 @@ createApp({
         const identityService = new IdentityService(db, logSystemAction);
         const hydrationService = new HydrationService(db, identityService, logSystemAction);
         const queueService = new QueueService(db, logSystemAction);
+        const lighthouseEngine = new LighthouseEngine(db, logSystemAction);
+        if (typeof window !== "undefined") {
+            window.lighthouseEngine = lighthouseEngine;
+        }
+
+        const lighthouseReport = ref(null);
+        const isAuditingLighthouse = ref(false);
+
+        const runLighthouseAudit = async (options = { period: null, persist: false }) => {
+            isAuditingLighthouse.value = true;
+            try {
+                const result = await lighthouseEngine.runFullForensicAudit(options);
+                lighthouseReport.value = result;
+                return result;
+            } catch (error) {
+                console.error("Lighthouse Forensic Audit Error:", error);
+                throw error;
+            } finally {
+                isAuditingLighthouse.value = false;
+            }
+        };
+
+        const exportLighthouseCsv = () => {
+            if (!lighthouseReport.value || !lighthouseReport.value.findings) return "";
+            return lighthouseEngine.exportReconciliationCsv(lighthouseReport.value.findings);
+        };
 
 
                 // --- 3. REACTIVE STATE ---
@@ -2163,7 +2190,7 @@ createApp({
                                     importBatches, discoveryHealth,
                                     sageRecoveries, recoveryStats,
                                     currentView, sidebarExpanded, toggleGroup,
-                                    activeYear, activeMonth, activeSite,
+                                    activeYear,
                                     mockAging, calibrationStats,
                                                                         brandFilters, exportFilteredBrandData,
                                                 builder, builderOptions, builderPreviewData, runBuilderExport,
@@ -2177,7 +2204,10 @@ createApp({
                         // PHASE 3 EXPORTS
                         mappingQueue, selectedQueueItem, vendorMappings, siteMappings, vendorSearch, 
                         selectedVendorForLink, showVendorModal, vendorForm, mappingQueueCount, 
-                        filteredVendors, resolveMapping, saveCanonicalVendor, runHydrationDryRun
+                        filteredVendors, resolveMapping, saveCanonicalVendor, runHydrationDryRun,
+
+                        // LIGHTHOUSE FORENSIC AUDIT EXPORTS
+                        lighthouseReport, isAuditingLighthouse, runLighthouseAudit, exportLighthouseCsv
         };
 
 
