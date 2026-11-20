@@ -52,5 +52,46 @@ export const AUDIT_ACTIONS = {
     LOGIN_SUCCESS: "Login Successful",
     LOGIN_FAILURE: "Login Failed",
     CREDIT_UPDATED: "Credit Amount Updated",
-    COMMUNICATION_LOGGED: "Communication Logged"
+    COMMUNICATION_LOGGED: "Communication Logged",
+    FORENSIC_SCAN_COMPLETED: "Forensic Scan Completed",
+    FORENSIC_VIOLATION_FLAGGED: "Forensic Violation Flagged",
+    FORENSIC_FINDING_RESOLVED: "Forensic Finding Resolved"
 };
+
+/**
+ * LIGHTHOUSE FORENSIC ACCOUNTING & SOFT AUDIT GOVERNANCE
+ * Defines violation categories, severity levels, audit lifecycle statuses, and default thresholds.
+ */
+
+export const AUDIT_VIOLATION_TYPES = {
+    VARIANCE_ANOMALY: "Variance Anomaly",
+    DUPLICATE_CLAIM: "Potential Duplicate Claim",
+    MAPPING_AMBIGUITY: "Mapping Ambiguity",
+    STALE_CREDIT: "Stale/Aging Credit",
+    UNMAPPED_GL_RECOVERY: "Unmapped GL Recovery",
+    ORPHANED_SETTLEMENT: "Orphaned GL Settlement"
+};
+
+export const AUDIT_SEVERITY = {
+    CRITICAL: "Critical",
+    WARNING: "Warning",
+    INFO: "Info"
+};
+
+export const FORENSIC_AUDIT_STATUS = {
+    PENDING_REVIEW: "Pending Review",
+    AUDIT_FLAGGED: "Audit Flagged",
+    CLEARED: "Cleared",
+    REMEDIATED: "Remediated",
+    ESCALATED: "Escalated"
+};
+
+export const FORENSIC_THRESHOLDS = {
+    VARIANCE_TOLERANCE_DOLLARS: 25.00,
+    VARIANCE_TOLERANCE_PERCENT: 0.05, // 5% variance threshold
+    CRITICAL_VARIANCE_DOLLARS: 500.00,
+    CRITICAL_VARIANCE_PERCENT: 0.20,  // 20% critical threshold
+    STALE_DISCOVERY_SLA_DAYS: 30,     // Max days in DISCOVERED / VALIDATED before outreach
+    AGING_CRITICAL_SLA_DAYS: 90       // Max days unrecovered before critical aging flag
+};
+
