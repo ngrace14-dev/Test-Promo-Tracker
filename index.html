@@ -23,17 +23,23 @@
                                     <!-- GLOBAL HEADER -->
             <header class="bg-white text-slate-900 px-6 py-3 flex justify-between items-center shrink-0 shadow-sm z-30 border-b border-slate-200">
                 <div class="flex items-center gap-6">
-                    <div class="flex items-center gap-3">
-                        <div class="bg-emerald-500 p-1.5 rounded-lg shadow-sm">
-                            <i data-lucide="badge-dollar-sign" class="w-6 h-6 text-white"></i>
+                    <button @click="returnToHub" class="flex items-center gap-3 text-left group">
+                        <div class="bg-emerald-500 group-hover:bg-emerald-600 p-1.5 rounded-lg shadow-sm transition-colors">
+                            <i data-lucide="layout-grid" class="w-6 h-6 text-white"></i>
                         </div>
                         <div>
-                            <h1 class="font-black tracking-tight text-lg leading-tight uppercase">PCRP <span class="text-emerald-500 ml-1">v4.0</span></h1>
+                            <h1 class="font-black tracking-tight text-lg leading-tight uppercase flex items-center gap-1.5">
+                                PCRP <span class="text-emerald-500">SUITE HUB</span>
+                            </h1>
                             <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest flex items-center gap-1">
-                                <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span> Live Workbook Sync
+                                <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span> {{ activeToolMeta.title }}
                             </p>
                         </div>
-                    </div>
+                    </button>
+
+                    <button v-if="currentView !== 'HUB'" @click="returnToHub" class="bg-slate-900 hover:bg-slate-800 text-amber-400 px-3.5 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-sm transition-all">
+                        <i data-lucide="grid" class="w-3.5 h-3.5"></i> App Selector
+                    </button>
 
                     <!-- GLOBAL FILTERS -->
                     <div class="flex items-center bg-slate-50 rounded-xl p-1 border border-slate-200 ml-4">
@@ -82,12 +88,25 @@
                     <nav class="p-4 space-y-6">
                         <!-- Navigation Groups -->
                         <div>
+                            <p class="px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Suite Launcher</p>
+                            <div class="space-y-1">
+                                <button @click="returnToHub" :class="currentView === 'HUB' ? 'sidebar-link-active' : 'sidebar-link-inactive'" class="sidebar-link w-full">
+                                    <i data-lucide="layout-grid" class="w-5 h-5"></i> Suite App Selector
+                                </button>
+                                <button @click="navigateToTool('LIGHTHOUSE')" :class="currentView === 'LIGHTHOUSE' ? 'sidebar-link-active' : 'sidebar-link-inactive'" class="sidebar-link w-full justify-between">
+                                    <span class="flex items-center gap-3"><i data-lucide="radar" class="w-5 h-5 text-amber-500"></i> Lighthouse Audit</span>
+                                    <span v-if="lighthouseReport?.summary?.totalFindings" class="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">{{ lighthouseReport.summary.totalFindings }}</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
                             <p class="px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Governance</p>
                             <div class="space-y-1">
-                                <button @click="currentView = 'DASHBOARD'" :class="currentView === 'DASHBOARD' ? 'sidebar-link-active' : 'sidebar-link-inactive'" class="sidebar-link w-full">
+                                <button @click="navigateToTool('DASHBOARD')" :class="currentView === 'DASHBOARD' ? 'sidebar-link-active' : 'sidebar-link-inactive'" class="sidebar-link w-full">
                                     <i data-lucide="layout-dashboard" class="w-5 h-5"></i> Executive Dashboard
                                 </button>
-                                <button @click="currentView = 'IMPORT_CENTER'" :class="currentView === 'IMPORT_CENTER' ? 'sidebar-link-active' : 'sidebar-link-inactive'" class="sidebar-link w-full">
+                                <button @click="navigateToTool('IMPORT_CENTER')" :class="currentView === 'IMPORT_CENTER' ? 'sidebar-link-active' : 'sidebar-link-inactive'" class="sidebar-link w-full">
                                     <i data-lucide="terminal" class="w-5 h-5"></i> Import Control Center
                                 </button>
                             </div>
@@ -152,7 +171,183 @@
 
                 <!-- MAIN VIEWPORT -->
                 <main class="flex-1 overflow-hidden flex flex-col">
-                    
+
+                    <!-- MULTI-TOOL SUITE HUB APP SELECTOR (DEFAULT POST-LOGIN HOMEPAGE) -->
+                    <div v-if="currentView === 'HUB'" class="flex-1 overflow-y-auto p-8 space-y-8 bg-slate-100">
+                        <!-- Hero Suite Banner -->
+                        <div class="bg-slate-950 text-white rounded-3xl p-8 shadow-xl border border-slate-800 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 relative overflow-hidden">
+                            <div class="space-y-2 relative z-10 max-w-2xl">
+                                <div class="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+                                    <span class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span> Multi-Tool Suite Command Center
+                                </div>
+                                <h2 class="text-3xl font-black tracking-tight">Welcome back, {{ loggedInUser || 'Operator' }}</h2>
+                                <p class="text-slate-400 text-sm font-medium">
+                                    Select a specialized workbench below to audit general ledger accounts, ingest POS discovery batches, reconcile vendor credit memos, or manage canonical identities.
+                                </p>
+                            </div>
+
+                            <div class="flex flex-wrap items-center gap-4 relative z-10">
+                                <div class="bg-slate-900 border border-slate-800 px-5 py-3.5 rounded-2xl">
+                                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lighthouse Soft Audit</p>
+                                    <p class="text-xl font-black text-amber-400 mt-0.5">
+                                        {{ lighthouseReport ? lighthouseReport.summary.totalFindings + ' Flags (' + formatCurrency(lighthouseReport.summary.totalVarianceExposure) + ')' : 'Ready to Scan' }}
+                                    </p>
+                                </div>
+                                <button @click="navigateToTool('LIGHTHOUSE')" class="bg-amber-500 hover:bg-amber-400 text-slate-950 px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg transition-all flex items-center gap-2">
+                                    <i data-lucide="radar" class="w-4 h-4"></i> Launch Lighthouse Audit
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- App Selector Grid -->
+                        <div>
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Available Suite Applications ({{ suiteTools.length }})</h3>
+                                <span class="text-xs font-bold text-slate-400">Active Context: <strong class="text-slate-700">{{ activeSite }} &bull; {{ activeMonth }} {{ activeYear }}</strong></span>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                                <button
+                                    v-for="tool in suiteTools"
+                                    :key="tool.id"
+                                    @click="navigateToTool(tool.id)"
+                                    class="bg-white hover:bg-slate-50 p-6 rounded-3xl shadow-sm hover:shadow-xl border-2 border-slate-200/80 hover:border-emerald-500 transition-all text-left flex flex-col justify-between group"
+                                >
+                                    <div>
+                                        <div class="flex justify-between items-start mb-5">
+                                            <div class="w-12 h-12 rounded-2xl bg-slate-950 text-white flex items-center justify-center group-hover:scale-110 transition-transform shadow-md">
+                                                <i :data-lucide="tool.icon" class="w-6 h-6 text-emerald-400"></i>
+                                            </div>
+                                            <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-700 group-hover:bg-emerald-50 group-hover:text-emerald-700 transition-colors">
+                                                {{ tool.badge }}
+                                            </span>
+                                        </div>
+                                        <p class="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">{{ tool.category }}</p>
+                                        <h4 class="text-lg font-black text-slate-900 group-hover:text-emerald-700 transition-colors">{{ tool.title }}</h4>
+                                        <p class="text-xs font-bold text-slate-400 mb-3">{{ tool.subtitle }}</p>
+                                        <p class="text-xs text-slate-500 leading-relaxed">{{ tool.description }}</p>
+                                    </div>
+
+                                    <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-black text-slate-900 group-hover:text-emerald-600">
+                                        <span>Open Workbench</span>
+                                        <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform"></i>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- LIGHTHOUSE FORENSIC ACCOUNTANT SOFT AUDIT WORKBENCH -->
+                    <div v-if="currentView === 'LIGHTHOUSE'" class="flex-1 overflow-hidden flex flex-col bg-slate-100 p-8 space-y-6">
+                        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4">
+                            <div>
+                                <div class="inline-flex items-center gap-2 bg-amber-500/10 text-amber-700 border border-amber-300 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-2">
+                                    <i data-lucide="radar" class="w-3.5 h-3.5"></i> Forensic Accountant Soft Audit System ({{ lighthouseMode }})
+                                </div>
+                                <h2 class="text-3xl font-black text-slate-900">Lighthouse GL &amp; POS Integrity Engine</h2>
+                                <p class="text-slate-500 font-medium text-sm">Non-destructive cross-account audit across General Ledger recoveries, POS discovery claims, aging SLAs, and identity mappings.</p>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-3">
+                                <button @click="runLighthouseAudit({ mode: 'SIMULATION' })" :disabled="isAuditingLighthouse" class="bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest shadow-sm transition-all flex items-center gap-2">
+                                    <i data-lucide="flask-conical" class="w-4 h-4 text-amber-500"></i> 4-Vector Demo Scan
+                                </button>
+                                <button @click="runLighthouseAudit({ mode: 'LIVE', persist: false })" :disabled="isAuditingLighthouse" class="bg-slate-950 hover:bg-slate-800 text-amber-400 px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest shadow-md transition-all flex items-center gap-2">
+                                    <i data-lucide="scan-line" class="w-4 h-4"></i> {{ isAuditingLighthouse ? 'Scanning Ledgers...' : 'Run Live GL Audit' }}
+                                </button>
+                                <button @click="downloadLighthouseCsv" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest shadow-md transition-all flex items-center gap-2">
+                                    <i data-lucide="download" class="w-4 h-4"></i> Export Recon CSV
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Forensic KPI Summary Cards -->
+                        <div v-if="lighthouseReport" class="grid grid-cols-1 md:grid-cols-4 gap-4 shrink-0">
+                            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Audit Flags</p>
+                                <p class="text-3xl font-black text-slate-900 mt-1">{{ lighthouseReport.summary.totalFindings }}</p>
+                                <p class="text-[10px] font-bold text-slate-400 mt-1 font-mono">Run: {{ lighthouseReport.runId }}</p>
+                            </div>
+                            <div class="bg-white p-5 rounded-2xl shadow-sm border border-red-200">
+                                <p class="text-[10px] font-black text-red-500 uppercase tracking-widest">Critical Violations</p>
+                                <p class="text-3xl font-black text-red-600 mt-1">{{ lighthouseReport.summary.bySeverity['Critical'] || 0 }}</p>
+                                <p class="text-[10px] font-bold text-slate-400 mt-1 uppercase">Warnings: {{ lighthouseReport.summary.bySeverity['Warning'] || 0 }}</p>
+                            </div>
+                            <div class="bg-white p-5 rounded-2xl shadow-sm border border-amber-200">
+                                <p class="text-[10px] font-black text-amber-600 uppercase tracking-widest">Total Variance Exposure</p>
+                                <p class="text-3xl font-black text-amber-600 mt-1">{{ formatCurrency(lighthouseReport.summary.totalVarianceExposure) }}</p>
+                                <p class="text-[10px] font-bold text-slate-400 mt-1 uppercase">Unreconciled GL vs POS</p>
+                            </div>
+                            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Top Flagged Vendor</p>
+                                <p class="text-lg font-black text-slate-900 mt-1 truncate">{{ lighthouseReport.summary.topFlaggedVendors?.[0]?.vendorName || 'None' }}</p>
+                                <p class="text-xs font-bold text-red-600 mt-1">{{ lighthouseReport.summary.topFlaggedVendors?.[0] ? formatCurrency(lighthouseReport.summary.topFlaggedVendors[0].totalExposure) + ' exposure' : '$0.00' }}</p>
+                            </div>
+                        </div>
+
+                        <!-- Filter Controls & Findings Table -->
+                        <div class="bg-white rounded-3xl shadow-sm border border-slate-200 flex-1 flex flex-col overflow-hidden">
+                            <div class="p-4 border-b bg-slate-50 flex flex-wrap justify-between items-center gap-4">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-2">Severity:</span>
+                                    <button v-for="sev in ['ALL', 'Critical', 'Warning']" :key="sev" @click="lighthouseFilterSeverity = sev" :class="lighthouseFilterSeverity === sev ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 border border-slate-200'" class="px-3 py-1 rounded-lg text-xs font-black uppercase transition-all">{{ sev }}</button>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Vector Filter:</span>
+                                    <select v-model="lighthouseFilterType" class="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-700 outline-none">
+                                        <option value="ALL">All Audit Vectors ({{ lighthouseReport?.findings?.length || 0 }})</option>
+                                        <option v-for="vType in Object.values(AUDIT_VIOLATION_TYPES)" :key="vType" :value="vType">{{ vType }}</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="flex-1 overflow-auto">
+                                <table class="excel-table w-full">
+                                    <thead class="bg-slate-50 sticky top-0 z-10">
+                                        <tr>
+                                            <th>Severity</th>
+                                            <th>Forensic Vector</th>
+                                            <th>Vendor / Entity</th>
+                                            <th>Period</th>
+                                            <th>Expected ($)</th>
+                                            <th>Actual GL ($)</th>
+                                            <th>Variance ($)</th>
+                                            <th>Forensic Finding &amp; Record IDs</th>
+                                            <th>Audit Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="(finding, idx) in filteredLighthouseFindings" :key="idx">
+                                            <td>
+                                                <span :class="finding.severity === 'Critical' ? 'bg-red-100 text-red-700 border-red-200' : 'bg-amber-100 text-amber-800 border-amber-200'" class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase border">
+                                                    {{ finding.severity }}
+                                                </span>
+                                            </td>
+                                            <td class="text-xs font-black text-slate-800">{{ finding.violationType }}</td>
+                                            <td class="text-xs font-bold text-slate-900">{{ finding.vendorName }}</td>
+                                            <td class="text-xs font-mono text-slate-500">{{ finding.period }}</td>
+                                            <td class="text-xs font-mono font-bold text-slate-700">{{ formatCurrency(finding.expectedAmount) }}</td>
+                                            <td class="text-xs font-mono font-bold text-emerald-700">{{ formatCurrency(finding.actualAmount) }}</td>
+                                            <td class="text-xs font-mono font-black text-red-600">{{ formatCurrency(finding.varianceAmount) }}</td>
+                                            <td class="text-xs text-slate-600 max-w-md">
+                                                <p class="font-medium">{{ finding.message }}</p>
+                                                <p class="text-[10px] font-mono text-slate-400 mt-0.5">IDs: {{ (finding.relatedRecordIds || []).join(', ') }}</p>
+                                            </td>
+                                            <td>
+                                                <select :value="finding.status" @change="updateForensicFindingStatus(finding, $event.target.value)" class="text-[11px] font-black bg-slate-100 border border-slate-200 rounded-lg px-2 py-1 outline-none cursor-pointer">
+                                                    <option value="Pending Review">Pending Review</option>
+                                                    <option value="Audit Flagged">Audit Flagged</option>
+                                                    <option value="Cleared">Cleared</option>
+                                                    <option value="Remediated">Remediated</option>
+                                                    <option value="Escalated">Escalated</option>
+                                                </select>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- EXECUTIVE DASHBOARD VIEW -->
                     <div v-if="currentView === 'DASHBOARD'" class="flex-1 overflow-y-auto p-8 space-y-8 bg-gray-100">
                         <div class="flex justify-between items-end">
@@ -631,6 +826,100 @@
                                                             </div>
                                                         </div>
                                                     </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- MASTER SETTLEMENT LEDGER VIEW -->
+                                            <div v-if="currentView === 'LEDGER'" class="flex-1 overflow-y-auto p-8 space-y-6 bg-slate-100">
+                                                <div class="flex justify-between items-end">
+                                                    <div>
+                                                        <h2 class="text-3xl font-black text-slate-900">Master Settlement Ledger</h2>
+                                                        <p class="text-slate-500 font-medium">Active promo credit ledger, vendor outreach status, and resolution workbench ({{ activeSite }})</p>
+                                                    </div>
+                                                    <button @click="openPromoModal" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest shadow-md flex items-center gap-2">
+                                                        <i data-lucide="plus" class="w-4 h-4"></i> Log Manual Credit
+                                                    </button>
+                                                </div>
+                                                <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                                                    <table class="excel-table w-full">
+                                                        <thead class="bg-slate-50">
+                                                            <tr>
+                                                                <th>Month</th>
+                                                                <th>Vendor / Brand</th>
+                                                                <th>Program Type</th>
+                                                                <th>Amount</th>
+                                                                <th>Invoice / Memo #</th>
+                                                                <th>Status</th>
+                                                                <th>Actions</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <tr v-for="credit in filteredCredits" :key="credit.id">
+                                                                <td class="text-xs font-bold">{{ credit.trackingMonth }}</td>
+                                                                <td class="text-xs font-black text-slate-900">{{ credit.vendor }}</td>
+                                                                <td class="text-xs">{{ credit.creditType || 'Scan Down' }}</td>
+                                                                <td class="text-xs font-mono font-black text-emerald-700">{{ formatCurrency(credit.amount) }}</td>
+                                                                <td class="text-xs font-mono">{{ credit.invoice || '-' }}</td>
+                                                                <td><span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-slate-100 text-slate-800">{{ credit.status }}</span></td>
+                                                                <td class="flex gap-2">
+                                                                    <button @click="editCredit(credit)" class="text-xs font-bold text-blue-600 hover:underline">Edit</button>
+                                                                    <button v-if="credit.status !== 'Applied'" @click="openResolutionModal(credit)" class="text-xs font-bold text-emerald-600 hover:underline">Resolve</button>
+                                                                </td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+
+                                            <!-- WORKBOOK VALIDATION & AGING VIEW -->
+                                            <div v-if="currentView === 'VALIDATION'" class="flex-1 overflow-y-auto p-8 space-y-6 bg-slate-100">
+                                                <div class="flex justify-between items-end">
+                                                    <div>
+                                                        <h2 class="text-3xl font-black text-slate-900">Workbook Calibration &amp; Aging Matrix</h2>
+                                                        <p class="text-slate-500 font-medium">Reconciling PCRP ledger against master accounting workbook aging buckets</p>
+                                                    </div>
+                                                    <button @click="navigateToTool('LIGHTHOUSE')" class="bg-slate-950 text-amber-400 px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest">Open Lighthouse Forensic Scan</button>
+                                                </div>
+                                                <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                                                    <table class="excel-table w-full">
+                                                        <thead class="bg-slate-50">
+                                                            <tr>
+                                                                <th>Vendor</th>
+                                                                <th>Store</th>
+                                                                <th>Generated ($)</th>
+                                                                <th>Recovered ($)</th>
+                                                                <th>Outstanding ($)</th>
+                                                                <th>0-30 Days</th>
+                                                                <th>31-60 Days</th>
+                                                                <th>61-90 Days</th>
+                                                                <th>Status</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <tr v-for="row in mockAging" :key="row.vendor + row.store">
+                                                                <td class="text-xs font-black">{{ row.vendor }}</td>
+                                                                <td class="text-xs">{{ row.store }}</td>
+                                                                <td class="text-xs font-mono">{{ formatCurrency(row.generated) }}</td>
+                                                                <td class="text-xs font-mono text-emerald-700">{{ formatCurrency(row.recovered) }}</td>
+                                                                <td class="text-xs font-mono font-black text-amber-600">{{ formatCurrency(row.outstanding) }}</td>
+                                                                <td class="text-xs font-mono">{{ formatCurrency(row['0-30']) }}</td>
+                                                                <td class="text-xs font-mono">{{ formatCurrency(row['31-60']) }}</td>
+                                                                <td class="text-xs font-mono text-red-600">{{ formatCurrency(row['61-90']) }}</td>
+                                                                <td><span class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-slate-100">{{ row.status }}</span></td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+
+                                            <!-- FORENSIC ARCHIVE VIEW -->
+                                            <div v-if="currentView === 'ARCHIVE'" class="flex-1 overflow-y-auto p-8 space-y-6 bg-slate-100">
+                                                <div class="flex justify-between items-end">
+                                                    <div>
+                                                        <h2 class="text-3xl font-black text-slate-900">Forensic &amp; Annual Archive</h2>
+                                                        <p class="text-slate-500 font-medium">Historical snapshots and annual recovery exports</p>
+                                                    </div>
+                                                    <button @click="archiveAndExportAnnualReport" class="bg-slate-950 text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest">Export Annual Archive CSV</button>
                                                 </div>
                                             </div>
 
@@ -1174,7 +1463,7 @@
         </div>
     </div>
 
-    <script type="module" src="portal.js?v=4"></script>
+    <script type="module" src="portal.js?v=5"></script>
 </body>
 </html>
 

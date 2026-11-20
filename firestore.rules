@@ -89,6 +89,30 @@ service cloud.firestore {
     match /emailHistories/{historyId} {
       allow read, write: if isAuthorizedManager();
     }
+
+    // PCRP Pipeline & Reconciliation Ledgers (Manager / Accounting only)
+    match /promoGenerated/{claimId} {
+      allow read, write: if isAuthorizedManager();
+    }
+    match /promoRecovered/{recoveryId} {
+      allow read, write: if isAuthorizedManager();
+    }
+    match /reconciliationQueue/{taskId} {
+      allow read, write: if isAuthorizedManager();
+    }
+    match /reconciliationLedger/{ledgerId} {
+      allow read, write: if isAuthorizedManager();
+    }
+
+    // Lighthouse Forensic Accounting Audit Collections (Append-only / Manager protected)
+    match /forensicAuditRuns/{runId} {
+      allow read, create: if isAuthorizedManager();
+      allow update, delete: if request.auth != null && request.auth.token.email == 'nicholas.grace@rredco.com';
+    }
+    match /forensicAuditLogs/{findingId} {
+      allow read, create, update: if isAuthorizedManager();
+      allow delete: if request.auth != null && request.auth.token.email == 'nicholas.grace@rredco.com';
+    }
     
     // Deny access to everything else in the database
     match /{document=**} {

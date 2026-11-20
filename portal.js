@@ -6,12 +6,21 @@ import { getFirestore, collection, addDoc, doc, updateDoc, deleteDoc, writeBatch
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app-check.js";
 import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-storage.js";
-import { PROMO_HIERARCHY, STATUS_DEFINITIONS, AUDIT_ACTIONS } from "./governance.js";
+import {
+    PROMO_HIERARCHY,
+    STATUS_DEFINITIONS,
+    AUDIT_ACTIONS,
+    AUDIT_VIOLATION_TYPES,
+    AUDIT_SEVERITY,
+    FORENSIC_AUDIT_STATUS
+} from "./governance.js";
 
-import { IdentityService } from "./services/IdentityService.js";
-import { HydrationService } from "./services/HydrationService.js";
-import { QueueService, QUEUE_ACTION_TYPES } from "./services/QueueService.js";
-import { LighthouseEngine } from "./services/LighthouseEngine.js";
+import { QUEUE_ACTION_TYPES } from "./services/QueueService.js";
+import {
+    createAppContainer,
+    SUITE_TOOLS,
+    buildBrowserSimulatedDataset
+} from "./services/AppContainer.js";
 
 
 
@@ -70,23 +79,42 @@ createApp({
             return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
         };
 
-        // --- 2. SERVICES ---
-        const identityService = new IdentityService(db, logSystemAction);
-        const hydrationService = new HydrationService(db, identityService, logSystemAction);
-        const queueService = new QueueService(db, logSystemAction);
-        const lighthouseEngine = new LighthouseEngine(db, logSystemAction);
+        // --- 2. SERVICES (DECOUPLED APP CONTAINER) ---
+        const appContainer = createAppContainer(db, logSystemAction);
+        const {
+            identityService,
+            hydrationService,
+            queueService,
+            lighthouseEngine
+        } = appContainer;
+
         if (typeof window !== "undefined") {
+            window.appContainer = appContainer;
             window.lighthouseEngine = lighthouseEngine;
         }
 
+        const suiteTools = ref(SUITE_TOOLS);
         const lighthouseReport = ref(null);
         const isAuditingLighthouse = ref(false);
+        const lighthouseMode = ref("SIMULATION"); // 'LIVE' or 'SIMULATION'
+        const lighthouseFilterSeverity = ref("ALL");
+        const lighthouseFilterType = ref("ALL");
 
-        const runLighthouseAudit = async (options = { period: null, persist: false }) => {
+        const runLighthouseAudit = async (options = { mode: "LIVE", period: null, persist: false }) => {
             isAuditingLighthouse.value = true;
             try {
-                const result = await lighthouseEngine.runFullForensicAudit(options);
+                const mode = options.mode || "LIVE";
+                lighthouseMode.value = mode;
+                const dataset = mode === "SIMULATION" ? buildBrowserSimulatedDataset() : null;
+                const result = await lighthouseEngine.runFullForensicAudit({
+                    period: options.period || null,
+                    persist: Boolean(options.persist && mode === "LIVE"),
+                    dataset
+                });
                 lighthouseReport.value = result;
+                nextTick(() => {
+                    if (window.lucide) window.lucide.createIcons();
+                });
                 return result;
             } catch (error) {
                 console.error("Lighthouse Forensic Audit Error:", error);
@@ -96,9 +124,43 @@ createApp({
             }
         };
 
+        const filteredLighthouseFindings = computed(() => {
+            if (!lighthouseReport.value || !lighthouseReport.value.findings) return [];
+            return lighthouseReport.value.findings.filter(f => {
+                const sevMatch = lighthouseFilterSeverity.value === "ALL" || f.severity === lighthouseFilterSeverity.value;
+                const typeMatch = lighthouseFilterType.value === "ALL" || f.violationType === lighthouseFilterType.value;
+                return sevMatch && typeMatch;
+            });
+        });
+
+        const updateForensicFindingStatus = (finding, newStatus) => {
+            if (!finding) return;
+            finding.status = newStatus;
+            logSystemAction(AUDIT_ACTIONS.FORENSIC_FINDING_RESOLVED, {
+                runId: finding.runId,
+                vendorName: finding.vendorName,
+                violationType: finding.violationType,
+                newStatus
+            });
+        };
+
         const exportLighthouseCsv = () => {
             if (!lighthouseReport.value || !lighthouseReport.value.findings) return "";
-            return lighthouseEngine.exportReconciliationCsv(lighthouseReport.value.findings);
+            return lighthouseEngine.exportReconciliationCsv(filteredLighthouseFindings.value);
+        };
+
+        const downloadLighthouseCsv = () => {
+            const csv = exportLighthouseCsv();
+            if (!csv) return alert("Run a Lighthouse forensic scan first to export findings.");
+            const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `Lighthouse_Forensic_Audit_${lighthouseReport.value?.runId || Date.now()}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(() => URL.revokeObjectURL(url), 150);
         };
 
 
@@ -110,7 +172,36 @@ createApp({
         const activeBrand = ref(null);
         const brandTab = ref('Dashboard');
         const activeSite = ref('Red Bluff');
-        const currentView = ref('DASHBOARD');
+        const currentView = ref('HUB');
+
+        const activeToolMeta = computed(() => {
+            if (currentView.value === 'HUB') {
+                return { id: 'HUB', title: 'Multi-Tool Suite Hub', subtitle: 'Central Command & App Selector', category: 'Platform Hub' };
+            }
+            return suiteTools.value.find(t => t.id === currentView.value) || {
+                id: currentView.value,
+                title: currentView.value,
+                subtitle: 'PCRP Module',
+                category: 'System'
+            };
+        });
+
+        const navigateToTool = (viewId) => {
+            currentView.value = viewId;
+            if (viewId === 'LIGHTHOUSE' && !lighthouseReport.value) {
+                runLighthouseAudit({ mode: 'SIMULATION' });
+            }
+            nextTick(() => {
+                if (window.lucide) window.lucide.createIcons();
+            });
+        };
+
+        const returnToHub = () => {
+            currentView.value = 'HUB';
+            nextTick(() => {
+                if (window.lucide) window.lucide.createIcons();
+            });
+        };
         
         const mappingQueue = ref([]);
         const selectedQueueItem = ref(null);
@@ -1108,9 +1199,10 @@ createApp({
             ARCHIVE: false
         });
 
-        // FORCE RENDER PRIORITY (STAGE 1)
+        // FORCE RENDER PRIORITY (STAGE 1) — Default post-login view is the Multi-Tool Suite Hub
         onMounted(() => {
-            currentView.value = 'DASHBOARD';
+            currentView.value = 'HUB';
+            runLighthouseAudit({ mode: 'SIMULATION' });
             refreshIcons();
         });
 
@@ -1207,7 +1299,7 @@ createApp({
                 .then(() => { 
                     emailInput.value = ''; 
                     passwordInput.value = ''; 
-                    currentView.value = 'DASHBOARD';
+                    currentView.value = 'HUB';
                     refreshIcons(); 
                 })
                 .catch((error) => { authError.value = "Invalid email or password."; });
@@ -2191,23 +2283,27 @@ createApp({
                                     sageRecoveries, recoveryStats,
                                     currentView, sidebarExpanded, toggleGroup,
                                     activeYear,
-                                    mockAging, calibrationStats,
-                                                                        brandFilters, exportFilteredBrandData,
-                                                builder, builderOptions, builderPreviewData, runBuilderExport,
+                                    mockAging, calibrationStats, executiveKPIs,
+                                    brandFilters, exportFilteredBrandData,
+                                    builder, builderOptions, builderPreviewData, runBuilderExport,
                         publishReport, isReportPublished, isPublishing, pushMonthToBrands,
 
                         discoveryTab, // Phase 6D
 
-                                                creditRequests, updateRequestStatus, reconcileRequest, getStatusDisplayName, getStatusColor,
-                        STATUS_DEFINITIONS, isLogsMinimized,
+                        creditRequests, updateRequestStatus, reconcileRequest, getStatusDisplayName, getStatusColor,
+                        STATUS_DEFINITIONS, AUDIT_ACTIONS, AUDIT_VIOLATION_TYPES, AUDIT_SEVERITY, FORENSIC_AUDIT_STATUS,
+                        isLogsMinimized,
 
                         // PHASE 3 EXPORTS
                         mappingQueue, selectedQueueItem, vendorMappings, siteMappings, vendorSearch, 
                         selectedVendorForLink, showVendorModal, vendorForm, mappingQueueCount, 
                         filteredVendors, resolveMapping, saveCanonicalVendor, runHydrationDryRun,
 
-                        // LIGHTHOUSE FORENSIC AUDIT EXPORTS
-                        lighthouseReport, isAuditingLighthouse, runLighthouseAudit, exportLighthouseCsv
+                        // SUITE HUB & LIGHTHOUSE FORENSIC AUDIT EXPORTS
+                        suiteTools, activeToolMeta, navigateToTool, returnToHub,
+                        lighthouseReport, isAuditingLighthouse, lighthouseMode,
+                        lighthouseFilterSeverity, lighthouseFilterType, filteredLighthouseFindings,
+                        runLighthouseAudit, updateForensicFindingStatus, exportLighthouseCsv, downloadLighthouseCsv
         };
 
 
